@@ -770,6 +770,8 @@ public class MailConnection {
       content = getMessage().getContent();
       if ( content instanceof Multipart ) {
         handleMultipart( foldername, (Multipart) content, pattern );
+      } else {
+        this.handlePart( foldername, getMessage(), pattern );
       }
     } catch ( Exception e ) {
       throw new KettleException( BaseMessages.getString( PKG, "MailConnection.Error.SavingAttachedFiles", ""
