@@ -622,6 +622,11 @@ public class MappingMeta extends BaseStepMeta implements StepMetaInterface, HasR
 
   public static final synchronized TransMeta loadMappingMeta( MappingMeta mappingMeta, Repository rep,
     IMetaStore metaStore, VariableSpace space ) throws KettleException {
+    return loadMappingMeta( mappingMeta, rep, metaStore, space, true );
+  }
+
+  public static final synchronized TransMeta loadMappingMeta( MappingMeta mappingMeta, Repository rep,
+        IMetaStore metaStore, VariableSpace space, boolean share ) throws KettleException {
     TransMeta mappingTransMeta = null;
 
     switch ( mappingMeta.getSpecificationMethod() ) {
@@ -631,8 +636,8 @@ public class MappingMeta extends BaseStepMeta implements StepMetaInterface, HasR
           // OK, load the meta-data from file...
           //
           // Don't set internal variables: they belong to the parent thread!
-          //
-          mappingTransMeta = new TransMeta( realFilename, metaStore, rep, true, space, null );
+          // PDI-3064 do not share with parent variable space
+          mappingTransMeta = new TransMeta( realFilename, metaStore, rep, true, null, null );
           mappingTransMeta.getLogChannel().logDetailed(
             "Loading Mapping from repository",
             "Mapping transformation was loaded from XML file [" + realFilename + "]" );
@@ -700,7 +705,11 @@ public class MappingMeta extends BaseStepMeta implements StepMetaInterface, HasR
       throw new KettleException( BaseMessages.getString(
         PKG, "MappingMeta.Exception.InternalErrorTransMetaIsNULL.Message" ) );
     }
-    mappingTransMeta.copyVariablesFrom( space );
+    // PDI-3064 do not share with parent variable space
+    // in 98% we do share variables. Except mappings when we do control variables scopes.
+    if ( share ) {
+      mappingTransMeta.copyVariablesFrom( space );
+    }
     mappingTransMeta.setRepository( rep );
     mappingTransMeta.setMetaStore( metaStore );
     mappingTransMeta.setFilename( mappingTransMeta.getFilename() );
