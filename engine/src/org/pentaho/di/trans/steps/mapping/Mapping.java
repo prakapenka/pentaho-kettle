@@ -275,42 +275,65 @@ public class Mapping extends BaseStep implements StepInterface {
     }
   }
 
-  public void setMappingParameters( Trans trans, TransMeta transMeta, MappingParameters mappingParameters )
+  void setMappingParameters( Trans trans, TransMeta transMeta, MappingParameters mappingParameters )
     throws KettleException {
     if ( mappingParameters == null ) {
       return;
     }
 
-    Map<String, String> parameters = new HashMap<String, String>();
-    Set<String> subTransParameters = new HashSet<String>( Arrays.asList( transMeta.listParameters() ) );
-
     if ( mappingParameters.isInheritingAllVariables() ) {
-      // This will include parameters
-      for ( String variableName : listVariables() ) {
-        parameters.put( variableName, getVariable( variableName ) );
-      }
+      // We pass the values for all the parameters from the parent transformation
+      // Note that variables and already activated parameters will be copied.
+      trans.copyVariablesFrom( this.getTrans() );
     }
+    // Override mapping parameters
+    String[] childParameters = mappingParameters.getVariable();
+    String[] inputValues = mappingParameters.getInputField();
+    for ( int i = 0; i < childParameters.length; i++ ) {
+      String value = this.environmentSubstitute( inputValues[i] );
+      String key = childParameters[i];
 
-    String[] mappingVariables = mappingParameters.getVariable();
-    String[] inputFields = mappingParameters.getInputField();
-    for ( int i = 0; i < mappingVariables.length; i++ ) {
-      parameters.put( mappingVariables[i], environmentSubstitute( inputFields[i] ) );
-    }
-
-    for ( Entry<String, String> entry : parameters.entrySet() ) {
-      String key = entry.getKey();
-      String value = Const.NVL( entry.getValue(), "" );
-      if ( subTransParameters.contains( key ) ) {
-        trans.setParameterValue( key, Const.NVL( entry.getValue(), "" ) );
-      } else {
-        trans.setVariable( key, value );
-      }
+      transMeta.setParameterValue( key, value );
+      // avoid transformation's 'activate parameters' call override with defaults
+      trans.setParameterValue( key, value );
+      trans.setVariable( key, value );
     }
     trans.activateParameters();
   }
 
   public void prepareMappingExecution() throws KettleException {
-    initTransFromMeta();
+    // Create the transformation from meta-data...
+    //
+    data.mappingTrans = new Trans( data.mappingTransMeta, this );
+
+    if ( data.mappingTransMeta.getTransformationType() != TransformationType.Normal ) {
+      data.mappingTrans.getTransMeta().setUsingThreadPriorityManagment( false );
+    }
+
+    // Leave a path up so that we can set variables in sub-transformations...
+    //
+    data.mappingTrans.setParentTrans( getTrans() );
+
+    // Pass down the safe mode flag to the mapping...
+    //
+    data.mappingTrans.setSafeModeEnabled( getTrans().isSafeModeEnabled() );
+
+    // Pass down the metrics gathering flag:
+    //
+    data.mappingTrans.setGatheringMetrics( getTrans().isGatheringMetrics() );
+
+    // Also set the name of this step in the mapping transformation for logging
+    // purposes
+    //
+    data.mappingTrans.setMappingStepName( getStepname() );
+
+    // Also pass servlet information (if any)
+    //
+    data.mappingTrans.setServletPrintWriter( getTrans().getServletPrintWriter() );
+    data.mappingTrans.setServletReponse( getTrans().getServletResponse() );
+    data.mappingTrans.setServletRequest( getTrans().getServletRequest() );
+
+    setMappingParameters( data.mappingTrans, data.mappingTransMeta, meta.getMappingParameters() );
 
     // We launch the transformation in the processRow when the first row is
     // received.
@@ -575,13 +598,15 @@ public class Mapping extends BaseStep implements StepInterface {
     if ( !super.init( smi, sdi ) ) {
       return false;
     }
-    // First we need to load the mapping (transformation)
+      // First we need to load the mapping (transformation)
     try {
       // Pass the repository down to the metadata object...
       //
       meta.setRepository( getTransMeta().getRepository() );
 
-      getData().mappingTransMeta = MappingMeta.loadMappingMeta( meta, meta.getRepository(), meta.getMetaStore(), this );
+      data.mappingTransMeta =
+        MappingMeta.loadMappingMeta( meta, meta.getRepository(), meta.getMetaStore(), this,
+            meta.getMappingParameters().isInheritingAllVariables() );
 
       if ( data.mappingTransMeta == null ) {
         // Do we have a mapping at all?
