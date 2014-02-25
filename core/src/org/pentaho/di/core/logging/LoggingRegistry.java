@@ -22,6 +22,8 @@
 
 package org.pentaho.di.core.logging;
 
+import static org.pentaho.di.core.Const.KETTLE_LOG_MARK_MAPPINGS;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -63,14 +65,15 @@ public class LoggingRegistry {
 
   public String registerLoggingSource( Object object ) {
     synchronized ( this.syncObject ) {
-
       this.maxSize = Const.toInt( EnvUtil.getSystemProperty( "KETTLE_MAX_LOGGING_REGISTRY_SIZE" ), 10000 );
+      boolean detailedLogTurnOn = "Y".equals( EnvUtil.getSystemProperty( KETTLE_LOG_MARK_MAPPINGS ) ) ? true : false;
 
       LoggingObject loggingSource = new LoggingObject( object );
-
-      LoggingObjectInterface found = findExistingLoggingSource( loggingSource );
-      if ( ( found != null ) && ( found.getParent() != null ) ) {
-        return found.getLogChannelId();
+      if ( !detailedLogTurnOn ) {
+        LoggingObjectInterface found = findExistingLoggingSource( loggingSource );
+        if ( ( found != null ) && ( found.getParent() != null ) ) {
+          return found.getLogChannelId();
+        }
       }
 
       String logChannelId = UUID.randomUUID().toString();
