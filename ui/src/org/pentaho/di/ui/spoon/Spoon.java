@@ -280,6 +280,7 @@ import org.pentaho.di.ui.repository.repositoryexplorer.uisupport.ManageUserUISup
 import org.pentaho.di.ui.spoon.SpoonLifecycleListener.SpoonLifeCycleEvent;
 import org.pentaho.di.ui.spoon.TabMapEntry.ObjectType;
 import org.pentaho.di.ui.spoon.delegates.SpoonDelegates;
+import org.pentaho.di.ui.spoon.dialog.AboutDialog;
 import org.pentaho.di.ui.spoon.dialog.AnalyseImpactProgressDialog;
 import org.pentaho.di.ui.spoon.dialog.CheckTransProgressDialog;
 import org.pentaho.di.ui.spoon.dialog.LogSettingsDialog;
@@ -5711,52 +5712,8 @@ public class Spoon extends ApplicationWindow implements AddUndoPositionInterface
   }
 
   public void helpAbout() {
-    MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION | SWT.CENTER | SWT.SHEET );
-
-    // resolve the release text
-    String releaseText = "";
-    if ( Const.RELEASE.equals( Const.ReleaseType.PREVIEW ) ) {
-      releaseText = BaseMessages.getString( PKG, "Spoon.PreviewRelease.HelpAboutText" );
-    } else if ( Const.RELEASE.equals( Const.ReleaseType.RELEASE_CANDIDATE ) ) {
-      releaseText = BaseMessages.getString( PKG, "Spoon.Candidate.HelpAboutText" );
-    } else if ( Const.RELEASE.equals( Const.ReleaseType.MILESTONE ) ) {
-      releaseText = BaseMessages.getString( PKG, "Spoon.Milestone.HelpAboutText" );
-    } else if ( Const.RELEASE.equals( Const.ReleaseType.GA ) ) {
-      releaseText = BaseMessages.getString( PKG, "Spoon.GA.HelpAboutText" );
-    }
-
-    // build a message
-    StringBuilder messageBuilder = new StringBuilder();
-
-    messageBuilder.append( BaseMessages.getString( PKG, "System.ProductInfo" ) );
-    messageBuilder.append( releaseText );
-    messageBuilder.append( " - " );
-    messageBuilder.append( BuildVersion.getInstance().getVersion() );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( BaseMessages.getString( PKG, "System.CompanyInfo", Const.COPYRIGHT_YEAR ) );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( "         " );
-    messageBuilder.append( BaseMessages.getString( PKG, "System.ProductWebsiteUrl" ) );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( "Build version : " );
-    messageBuilder.append( BuildVersion.getInstance().getVersion() );
-    messageBuilder.append( Const.CR );
-    messageBuilder.append( "Build date    : " );
-    messageBuilder.append( BuildVersion.getInstance().getBuildDate() ); // this should be the longest line of text
-    messageBuilder.append( "     " ); // so this is the right margin
-    messageBuilder.append( Const.CR );
-
-    // set the text in the message box
-    mb.setMessage( messageBuilder.toString() );
-    mb.setText( APP_NAME );
-
-    // now open the message bx
-    mb.open();
+    AboutDialog about = new AboutDialog( shell, PKG );
+    about.open();
   }
 
   /**
