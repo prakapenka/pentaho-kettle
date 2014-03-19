@@ -223,4 +223,20 @@ public class LoggingRegistry {
     // Remove all orphaned children
     this.childrenMap.keySet().retainAll( this.map.keySet() );
   }
+
+  /**
+   * for junit testing
+   * @return
+   */
+  Map<String, LoggingObjectInterface> dumpItems() {
+    return Collections.unmodifiableMap( this.map );
+  }
+
+  /**
+   * for junit testing
+   * @return
+   */
+  Map<String, List<String>> dumpChildren() {
+    return Collections.unmodifiableMap( this.childrenMap );
+  }
 }
