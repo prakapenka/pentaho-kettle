@@ -16,6 +16,7 @@ import org.pentaho.di.job.Job;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entry.JobEntryCopy;
 
+// TODO junit tests rewrite
 public class JobEntryFTPTest {
   private Job job;
   private JobEntryFTP entry;
@@ -29,7 +30,7 @@ public class JobEntryFTPTest {
   @Before
   public void setUp() throws Exception {
     job = new Job( null, new JobMeta() );
-    entry = new MockedJobEntryFTP();
+    entry = null; //new MockedJobEntryFTP();
 
     job.getJobMeta().addJobEntry( new JobEntryCopy( entry ) );
     entry.setParentJob( job );

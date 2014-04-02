@@ -22,7 +22,8 @@
 
 package org.pentaho.di.ui.job.entries.ftp;
 
-import java.net.InetAddress;
+import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -50,6 +51,11 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.ftp.FTPClientFactory;
+import org.pentaho.di.core.ftp.FTPCommonClient;
+import org.pentaho.di.core.ftp.FTPConnectionProperites;
+import org.pentaho.di.core.ftp.FTPImplementations;
+import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entries.ftp.JobEntryFTP;
@@ -65,11 +71,9 @@ import org.pentaho.di.ui.job.dialog.JobDialog;
 import org.pentaho.di.ui.job.entry.JobEntryDialog;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
-import com.enterprisedt.net.ftp.FTPClient;
-
 /**
  * This dialog allows you to edit the FTP Get job entry settings.
- *
+ * 
  * @author Matt
  * @since 19-06-2003
  */
@@ -274,7 +278,12 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   private CCombo wSuccessCondition;
   private FormData fdlSuccessCondition, fdSuccessCondition;
 
-  private FTPClient ftpclient = null;
+  private Label wlImplementation;
+  private FormData fdlImplementation;
+  private Combo wImplementation;
+  private FormData fdImplementation;
+
+  // private FTPCommonClient ftpclient = null;
   private String pwdFolder = null;
 
   // These should not be translated, they are required to exist on all
@@ -310,7 +319,7 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     ModifyListener lsMod = new ModifyListener() {
       public void modifyText( ModifyEvent e ) {
         pwdFolder = null;
-        ftpclient = null;
+        // ftpclient = null;
         jobEntry.setChanged();
       }
     };
@@ -328,8 +337,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Job entry name line
     wName =
-      new LabelText( shell, BaseMessages.getString( PKG, "JobFTP.Name.Label" ), BaseMessages.getString(
-        PKG, "JobFTP.Name.Tooltip" ) );
+        new LabelText( shell, BaseMessages.getString( PKG, "JobFTP.Name.Label" ), BaseMessages.getString( PKG,
+            "JobFTP.Name.Tooltip" ) );
     wName.addModifyListener( lsMod );
     fdName = new FormData();
     fdName.top = new FormAttachment( 0, 0 );
@@ -368,24 +377,50 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     wServerSettings.setLayout( ServerSettingsgroupLayout );
 
+    // switch implementation drop box
+    wlImplementation = new Label( wServerSettings, SWT.RIGHT );
+    // TODO set text
+    wlImplementation.setText( "Library:" );
+    props.setLook( wlImplementation );
+    fdlImplementation = new FormData();
+    fdlImplementation.left = new FormAttachment( 0, 0 );
+    fdlImplementation.top = new FormAttachment( wName, margin );
+    fdlImplementation.right = new FormAttachment( middle, 0 );
+    wlImplementation.setLayoutData( fdlImplementation );
+
+    wImplementation = new Combo( wServerSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    //TODO tooltip!
+    wImplementation.setToolTipText( "select some implementation" );
+    // TODO available implementations
+    FTPImplementations[] arr = FTPImplementations.values();
+    String[] options = new String[FTPImplementations.values().length];
+    for ( int i = 0; i < options.length; i++ ) {
+      options[i] = arr[i].getName();
+    }
+    wImplementation.setItems( options );
+    props.setLook( wImplementation );
+    fdImplementation = new FormData();
+    fdImplementation.left = new FormAttachment( middle, margin );
+    fdImplementation.top = new FormAttachment( wName, margin );
+    fdImplementation.right = new FormAttachment( 100, 0 );
+    wImplementation.setLayoutData( fdImplementation );
+
     // ServerName line
     wServerName =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Server.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.Server.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Server.Label" ), BaseMessages
+            .getString( PKG, "JobFTP.Server.Tooltip" ) );
     props.setLook( wServerName );
     wServerName.addModifyListener( lsMod );
     fdServerName = new FormData();
     fdServerName.left = new FormAttachment( 0, 0 );
-    fdServerName.top = new FormAttachment( wName, margin );
+    fdServerName.top = new FormAttachment( wImplementation, margin );
     fdServerName.right = new FormAttachment( 100, 0 );
     wServerName.setLayoutData( fdServerName );
 
     // Server port line
     wPort =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Port.Label" ), BaseMessages.getString(
-          PKG, "JobFTP.Port.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Port.Label" ), BaseMessages
+            .getString( PKG, "JobFTP.Port.Tooltip" ) );
     props.setLook( wPort );
     wPort.addModifyListener( lsMod );
     fdPort = new FormData();
@@ -396,9 +431,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // UserName line
     wUserName =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.User.Label" ), BaseMessages.getString(
-          PKG, "JobFTP.User.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.User.Label" ), BaseMessages
+            .getString( PKG, "JobFTP.User.Tooltip" ) );
     props.setLook( wUserName );
     wUserName.addModifyListener( lsMod );
     fdUserName = new FormData();
@@ -409,9 +443,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Password line
     wPassword =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Password.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.Password.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.Password.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.Password.Tooltip" ) );
     props.setLook( wPassword );
     wPassword.setEchoChar( '*' );
     wPassword.addModifyListener( lsMod );
@@ -429,9 +462,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Proxy host line
     wProxyHost =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyHost.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.ProxyHost.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyHost.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.ProxyHost.Tooltip" ) );
     props.setLook( wProxyHost );
     wProxyHost.addModifyListener( lsMod );
     fdProxyHost = new FormData();
@@ -442,9 +474,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Proxy port line
     wProxyPort =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyPort.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.ProxyPort.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyPort.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.ProxyPort.Tooltip" ) );
     props.setLook( wProxyPort );
     wProxyPort.addModifyListener( lsMod );
     fdProxyPort = new FormData();
@@ -455,9 +486,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Proxy username line
     wProxyUsername =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyUsername.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.ProxyUsername.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyUsername.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.ProxyUsername.Tooltip" ) );
     props.setLook( wProxyUsername );
     wProxyUsername.addModifyListener( lsMod );
     fdProxyUsername = new FormData();
@@ -468,9 +498,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Proxy password line
     wProxyPassword =
-      new LabelTextVar(
-        jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyPassword.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.ProxyPassword.Tooltip" ) );
+        new LabelTextVar( jobMeta, wServerSettings, BaseMessages.getString( PKG, "JobFTP.ProxyPassword.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.ProxyPassword.Tooltip" ) );
     props.setLook( wProxyPassword );
     wProxyPassword.setEchoChar( '*' );
     wProxyPassword.addModifyListener( lsMod );
@@ -537,9 +566,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Timeout line
     wTimeout =
-      new LabelTextVar(
-        jobMeta, wAdvancedSettings, BaseMessages.getString( PKG, "JobFTP.Timeout.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.Timeout.Tooltip" ) );
+        new LabelTextVar( jobMeta, wAdvancedSettings, BaseMessages.getString( PKG, "JobFTP.Timeout.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.Timeout.Tooltip" ) );
     props.setLook( wTimeout );
     wTimeout.addModifyListener( lsMod );
     fdTimeout = new FormData();
@@ -661,8 +689,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wbTestChangeFolderExists.setLayoutData( fdbTestChangeFolderExists );
 
     wFtpDirectory =
-      new TextVar( jobMeta, wRemoteSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString(
-        PKG, "JobFTP.RemoteDir.Tooltip" ) );
+        new TextVar( jobMeta, wRemoteSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString( PKG,
+            "JobFTP.RemoteDir.Tooltip" ) );
     props.setLook( wFtpDirectory );
     wFtpDirectory.addModifyListener( lsMod );
     fdFtpDirectory = new FormData();
@@ -673,9 +701,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // Wildcard line
     wWildcard =
-      new LabelTextVar(
-        jobMeta, wRemoteSettings, BaseMessages.getString( PKG, "JobFTP.Wildcard.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.Wildcard.Tooltip" ) );
+        new LabelTextVar( jobMeta, wRemoteSettings, BaseMessages.getString( PKG, "JobFTP.Wildcard.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.Wildcard.Tooltip" ) );
     props.setLook( wWildcard );
     wWildcard.addModifyListener( lsMod );
     fdWildcard = new FormData();
@@ -759,8 +786,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wbTestFolderExists.setLayoutData( fdbTestFolderExists );
 
     wMoveToDirectory =
-      new TextVar( jobMeta, wRemoteSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString(
-        PKG, "JobFTP.MoveToDirectory.Tooltip" ) );
+        new TextVar( jobMeta, wRemoteSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString( PKG,
+            "JobFTP.MoveToDirectory.Tooltip" ) );
     wMoveToDirectory.setToolTipText( BaseMessages.getString( PKG, "JobFTP.MoveFolder.Tooltip" ) );
     props.setLook( wMoveToDirectory );
     wMoveToDirectory.addModifyListener( lsMod );
@@ -848,8 +875,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     } );
 
     wTargetDirectory =
-      new TextVar( jobMeta, wLocalSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString(
-        PKG, "JobFTP.TargetDir.Tooltip" ) );
+        new TextVar( jobMeta, wLocalSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString( PKG,
+            "JobFTP.TargetDir.Tooltip" ) );
     props.setLook( wTargetDirectory );
     wTargetDirectory.addModifyListener( lsMod );
     fdTargetDirectory = new FormData();
@@ -964,8 +991,7 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wlAddDateBeforeExtension.setLayoutData( fdlAddDateBeforeExtension );
     wAddDateBeforeExtension = new Button( wLocalSettings, SWT.CHECK );
     props.setLook( wAddDateBeforeExtension );
-    wAddDateBeforeExtension
-      .setToolTipText( BaseMessages.getString( PKG, "JobFTP.AddDateBeforeExtension.Tooltip" ) );
+    wAddDateBeforeExtension.setToolTipText( BaseMessages.getString( PKG, "JobFTP.AddDateBeforeExtension.Tooltip" ) );
     fdAddDateBeforeExtension = new FormData();
     fdAddDateBeforeExtension.left = new FormAttachment( middle, margin );
     fdAddDateBeforeExtension.top = new FormAttachment( wDateTimeFormat, margin );
@@ -1140,8 +1166,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wlNrErrorsLessThan.setLayoutData( fdlNrErrorsLessThan );
 
     wNrErrorsLessThan =
-      new TextVar( jobMeta, wSuccessOn, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString(
-        PKG, "JobFTP.NrBadFormedLessThan.Tooltip" ) );
+        new TextVar( jobMeta, wSuccessOn, SWT.SINGLE | SWT.LEFT | SWT.BORDER, BaseMessages.getString( PKG,
+            "JobFTP.NrBadFormedLessThan.Tooltip" ) );
     props.setLook( wNrErrorsLessThan );
     wNrErrorsLessThan.addModifyListener( lsMod );
     fdNrErrorsLessThan = new FormData();
@@ -1202,9 +1228,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // host line
     wSocksProxyHost =
-      new LabelTextVar(
-        jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyHost.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.SocksProxyHost.Tooltip" ) );
+        new LabelTextVar( jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyHost.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.SocksProxyHost.Tooltip" ) );
     props.setLook( wSocksProxyHost );
     wSocksProxyHost.addModifyListener( lsMod );
     fdSocksProxyHost = new FormData();
@@ -1215,9 +1240,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // port line
     wSocksProxyPort =
-      new LabelTextVar(
-        jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyPort.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.SocksProxyPort.Tooltip" ) );
+        new LabelTextVar( jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyPort.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.SocksProxyPort.Tooltip" ) );
     props.setLook( wSocksProxyPort );
     wSocksProxyPort.addModifyListener( lsMod );
     fdSocksProxyPort = new FormData();
@@ -1228,9 +1252,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // username line
     wSocksProxyUsername =
-      new LabelTextVar(
-        jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyUsername.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.SocksProxyPassword.Tooltip" ) );
+        new LabelTextVar( jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyUsername.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.SocksProxyPassword.Tooltip" ) );
     props.setLook( wSocksProxyUsername );
     wSocksProxyUsername.addModifyListener( lsMod );
     fdSocksProxyUsername = new FormData();
@@ -1241,9 +1264,8 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     // password line
     wSocksProxyPassword =
-      new LabelTextVar(
-        jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyPassword.Label" ), BaseMessages
-          .getString( PKG, "JobFTP.SocksProxyPassword.Tooltip" ) );
+        new LabelTextVar( jobMeta, wSocksProxy, BaseMessages.getString( PKG, "JobFTP.SocksProxyPassword.Label" ),
+            BaseMessages.getString( PKG, "JobFTP.SocksProxyPassword.Tooltip" ) );
     props.setLook( wSocksProxyPort );
     wSocksProxyPassword.setEchoChar( '*' );
     wSocksProxyPassword.addModifyListener( lsMod );
@@ -1373,7 +1395,10 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   }
 
   private void test() {
-    if ( connectToFTP( false, false ) ) {
+    FTPCommonClient client = connectToFTP( false, false );
+    if ( client != null ) {
+      // don't forget to close client!
+      client.quit( null );
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION );
       mb.setMessage( BaseMessages.getString( PKG, "JobFTP.Connected.OK", wServerName.getText() ) + Const.CR );
       mb.setText( BaseMessages.getString( PKG, "JobFTP.Connected.Title.Ok" ) );
@@ -1381,16 +1406,17 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     } else {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "JobFTP.Connected.NOK.ConnectionBad", wServerName.getText() )
-        + Const.CR );
+          + Const.CR );
       mb.setText( BaseMessages.getString( PKG, "JobFTP.Connected.Title.Bad" ) );
       mb.open();
     }
-
   }
 
   private void checkRemoteFolder( boolean FTPFolfer, boolean checkMoveFolder, String foldername ) {
     if ( !Const.isEmpty( foldername ) ) {
-      if ( connectToFTP( FTPFolfer, checkMoveFolder ) ) {
+      FTPCommonClient client = connectToFTP( false, false );
+      if ( client != null ) {
+        client.quit( null );
         MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION );
         mb.setMessage( BaseMessages.getString( PKG, "JobFTP.FolderExists.OK", foldername ) + Const.CR );
         mb.setText( BaseMessages.getString( PKG, "JobFTP.FolderExists.Title.Ok" ) );
@@ -1404,49 +1430,81 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     }
   }
 
-  private boolean connectToFTP( boolean checkfolder, boolean checkmoveToFolder ) {
-    boolean retval = false;
-    try {
-      if ( ftpclient == null || !ftpclient.connected() ) {
-        // Create ftp client to host:port ...
-        ftpclient = new FTPClient();
-        String realServername = jobMeta.environmentSubstitute( wServerName.getText() );
-        int realPort = Const.toInt( jobMeta.environmentSubstitute( wPort.getText() ), 21 );
-        ftpclient.setRemoteAddr( InetAddress.getByName( realServername ) );
-        ftpclient.setRemotePort( realPort );
+  private FTPCommonClient connectToFTP( boolean checkfolder, boolean checkmoveToFolder ) {
+    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI, PKG );
 
-        if ( !Const.isEmpty( wProxyHost.getText() ) ) {
-          String realProxy_host = jobMeta.environmentSubstitute( wProxyHost.getText() );
-          ftpclient.setRemoteAddr( InetAddress.getByName( realProxy_host ) );
+    // extract connection properties (will not be used outside this method)
+    FTPConnectionProperites prop = new FTPConnectionProperites();
+    // set variable space to extract values
+    prop.setVariableSpace( jobMeta );
 
-          int port = Const.toInt( jobMeta.environmentSubstitute( wProxyPort.getText() ), 21 );
-          if ( port != 0 ) {
-            ftpclient.setRemotePort( port );
-          }
-        }
+    // set implementation
+    int selectionIndex = wImplementation.getSelectionIndex();
+    String value = ( selectionIndex >= 0 ? wImplementation.getItems()[selectionIndex] : null );
+    prop.setImplementation( value == null ? FTPImplementations.AUTO : FTPImplementations.getByValue( value ) );
 
-        // login to ftp host ...
-        ftpclient.connect();
-        String realUsername =
-          jobMeta.environmentSubstitute( wUserName.getText() )
-            + ( !Const.isEmpty( wProxyHost.getText() ) ? "@" + realServername : "" )
-            + ( !Const.isEmpty( wProxyUsername.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyUsername.getText() ) : "" );
+    // Normal server connect
+    prop.setServerName( wServerName.getText() );
+    String port = wPort.getText();
+    // assume this is correct integer
+    if ( !Const.isEmpty( port ) ) {
+      // by default it will be 21.
+      prop.setPort( port );
+    }
+    prop.setUserName( wUserName.getText() );
+    prop.setPassword( wPassword.getText() );
 
-        String realPassword =
-          jobMeta.environmentSubstitute( wPassword.getText() )
-            + ( !Const.isEmpty( wProxyPassword.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyPassword.getText() ) : "" );
-        // login now ...
-        ftpclient.login( realUsername, realPassword );
-        pwdFolder = ftpclient.pwd();
+    // Proxy connection settings
+    if ( !Const.isEmpty( wProxyHost.getText() ) ) {
+      prop.setProxyHost( wProxyHost.getText() );
+      String proxyPort = wProxyPort.getText();
+      if ( !Const.isEmpty( proxyPort ) ) {
+        prop.setProxyPort( proxyPort );
       }
+      if ( !Const.isEmpty( wProxyUsername.getText() ) ) {
+        // add login proxy info
+        prop.setProxyUsername( wProxyUsername.getText() );
+        prop.setProxyPassword( wProxyPassword.getText() );
+      }
+    }
 
+    // Socks connection settings?
+    if ( !Const.isEmpty( wSocksProxyHost.getText() ) ) {
+      // loks like we do have sock proxy
+      prop.setSocksProxyHost( wSocksProxyHost.getText() );
+      String sPort = wSocksProxyPort.getText();
+      if ( !Const.isEmpty( sPort ) ) {
+        prop.setSocksProxyPort( sPort );
+      }
+      if ( !Const.isEmpty( wSocksProxyUsername.getText() ) ) {
+        prop.setSocksProxyUsername( wSocksProxyUsername.getText() );
+        prop.setSocksProxyPassword( wSocksProxyPassword.getText() );
+      }
+    }
+    prop.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+    prop.setControlEncoding( wControlEncoding.getText() );
+    prop.setBinaryMode( wBinaryMode.getSelection() );
+
+    FTPCommonClient ftpclient = null;
+    try {
+      // attempt connect
+      ftpclient = factory.getFtpClientConnected( prop );
+    } catch ( Exception e ) {
+      return null;
+    }
+    if ( ftpclient == null ) {
+      return null;
+    }
+
+    // now try to check folder for success connection
+    try {
+      ftpclient.pwd();
+
+      // Do we need to check folder also?
       String realFtpDirectory = "";
       if ( !Const.isEmpty( wFtpDirectory.getText() ) ) {
         realFtpDirectory = jobMeta.environmentSubstitute( wFtpDirectory.getText() );
       }
-
       if ( checkfolder ) {
         if ( pwdFolder != null ) {
           ftpclient.chdir( pwdFolder );
@@ -1460,24 +1518,22 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
         if ( pwdFolder != null ) {
           ftpclient.chdir( pwdFolder );
         }
-
         // move to folder ...
-
         if ( !Const.isEmpty( wMoveToDirectory.getText() ) ) {
           String realMoveDirectory = jobMeta.environmentSubstitute( wMoveToDirectory.getText() );
           realMoveDirectory = realFtpDirectory + "/" + realMoveDirectory;
           ftpclient.chdir( realMoveDirectory );
         }
       }
-
-      retval = true;
     } catch ( Exception e ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "JobFTP.ErrorConnect.NOK", e.getMessage() ) + Const.CR );
       mb.setText( BaseMessages.getString( PKG, "JobFTP.ErrorConnect.Title.Bad" ) );
       mb.open();
+      ftpclient.quit( null );
+      ftpclient = null;
     }
-    return retval;
+    return ftpclient;
   }
 
   private void activeSuccessCondition() {
@@ -1486,10 +1542,10 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   }
 
   private void setAddDateBeforeExtension() {
-    wlAddDateBeforeExtension.setEnabled( wAddDate.getSelection()
-      || wAddTime.getSelection() || wSpecifyFormat.getSelection() );
-    wAddDateBeforeExtension.setEnabled( wAddDate.getSelection()
-      || wAddTime.getSelection() || wSpecifyFormat.getSelection() );
+    wlAddDateBeforeExtension.setEnabled( wAddDate.getSelection() || wAddTime.getSelection()
+        || wSpecifyFormat.getSelection() );
+    wAddDateBeforeExtension.setEnabled( wAddDate.getSelection() || wAddTime.getSelection()
+        || wSpecifyFormat.getSelection() );
     if ( !wAddDate.getSelection() && !wAddTime.getSelection() && !wSpecifyFormat.getSelection() ) {
       wAddDateBeforeExtension.setSelection( false );
     }
@@ -1519,7 +1575,7 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   }
 
   public void dispose() {
-    closeFTPConnection();
+    // closeFTPConnection();
     WindowProperty winprop = new WindowProperty( shell );
     props.setScreen( winprop );
     shell.dispose();
@@ -1530,19 +1586,19 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
    */
   public void getData() {
     wName.setText( Const.nullToEmpty( jobEntry.getName() ) );
-    wServerName.setText( Const.NVL( jobEntry.getServerName(), "" ) );
-    wPort.setText( Const.NVL( jobEntry.getPort(), "21" ) );
-    wUserName.setText( Const.NVL( jobEntry.getUserName(), "" ) );
-    wPassword.setText( Const.NVL( jobEntry.getPassword(), "" ) );
+    wServerName.setText( Const.NVL( jobEntry.getConnectionProperties().getServerName(), "" ) );
+    wPort.setText( Const.NVL( "" + jobEntry.getConnectionProperties().getPort(), "21" ) );
+    wUserName.setText( Const.NVL( jobEntry.getConnectionProperties().getUserName(), "" ) );
+    wPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getPassword(), "" ) );
     wFtpDirectory.setText( Const.NVL( jobEntry.getFtpDirectory(), "" ) );
     wTargetDirectory.setText( Const.NVL( jobEntry.getTargetDirectory(), "" ) );
     wWildcard.setText( Const.NVL( jobEntry.getWildcard(), "" ) );
-    wBinaryMode.setSelection( jobEntry.isBinaryMode() );
-    wTimeout.setText( "" + jobEntry.getTimeout() );
+    wBinaryMode.setSelection( jobEntry.getConnectionProperties().isBinaryMode() );
+    wTimeout.setText( "" + jobEntry.getConnectionProperties().getTimeout() );
     wRemove.setSelection( jobEntry.getRemove() );
     wOnlyNew.setSelection( jobEntry.isOnlyGettingNewFiles() );
-    wActive.setSelection( jobEntry.isActiveConnection() );
-    wControlEncoding.setText( jobEntry.getControlEncoding() );
+    wActive.setSelection( jobEntry.getConnectionProperties().isActiveConnection() );
+    wControlEncoding.setText( jobEntry.getConnectionProperties().getControlEncoding() );
     wMove.setSelection( jobEntry.isMoveFiles() );
     wMoveToDirectory.setText( Const.NVL( jobEntry.getMoveToDirectory(), "" ) );
 
@@ -1556,14 +1612,22 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wAddFilenameToResult.setSelection( jobEntry.isAddToResult() );
     wCreateMoveFolder.setSelection( jobEntry.isCreateMoveFolder() );
 
-    wProxyHost.setText( Const.NVL( jobEntry.getProxyHost(), "" ) );
-    wProxyPort.setText( Const.NVL( jobEntry.getProxyPort(), "" ) );
-    wProxyUsername.setText( Const.NVL( jobEntry.getProxyUsername(), "" ) );
-    wProxyPassword.setText( Const.NVL( jobEntry.getProxyPassword(), "" ) );
-    wSocksProxyHost.setText( Const.NVL( jobEntry.getSocksProxyHost(), "" ) );
-    wSocksProxyPort.setText( Const.NVL( jobEntry.getSocksProxyPort(), "1080" ) );
-    wSocksProxyUsername.setText( Const.NVL( jobEntry.getSocksProxyUsername(), "" ) );
-    wSocksProxyPassword.setText( Const.NVL( jobEntry.getSocksProxyPassword(), "" ) );
+    // get selected implementation. Since 5.0.x we have ability to switch.
+    List<String> items = Arrays.asList( wImplementation.getItems() );
+    // is selection specified in xml is supported?
+    int selection = items.indexOf( jobEntry.getConnectionProperties().getImplementation().getName() );
+    // if it is undefined, or not supported, we assume auto option is always in the list.
+    // this way if we can't use specified implementation we will relay on auto detection.
+    wImplementation.select( selection > 0 ? selection : items.indexOf( FTPImplementations.AUTO.getName() ) );
+
+    wProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyHost(), "" ) );
+    wProxyPort.setText( String.valueOf( jobEntry.getConnectionProperties().getProxyPort() ) );
+    wProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyUsername(), "" ) );
+    wProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyPassword(), "" ) );
+    wSocksProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyHost(), "" ) );
+    wSocksProxyPort.setText( String.valueOf( jobEntry.getConnectionProperties().getSocksProxyPort() ) );
+    wSocksProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyUsername(), "" ) );
+    wSocksProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyPassword(), "" ) );
     wIfFileExists.select( jobEntry.ifFileExists );
 
     if ( jobEntry.getLimit() != null ) {
@@ -1602,20 +1666,25 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
       mb.open();
       return;
     }
+
+    String[] items = wImplementation.getItems();
+    String item = items[wImplementation.getSelectionIndex()];
+    jobEntry.getConnectionProperties().setImplementation( FTPImplementations.getByValue( item ) );
+
     jobEntry.setName( wName.getText() );
-    jobEntry.setPort( wPort.getText() );
-    jobEntry.setServerName( wServerName.getText() );
-    jobEntry.setUserName( wUserName.getText() );
-    jobEntry.setPassword( wPassword.getText() );
+    jobEntry.getConnectionProperties().setPort( wPort.getText() );
+    jobEntry.getConnectionProperties().setServerName( wServerName.getText() );
+    jobEntry.getConnectionProperties().setUserName( wUserName.getText() );
+    jobEntry.getConnectionProperties().setPassword( wPassword.getText() );
     jobEntry.setFtpDirectory( wFtpDirectory.getText() );
     jobEntry.setTargetDirectory( wTargetDirectory.getText() );
     jobEntry.setWildcard( wWildcard.getText() );
-    jobEntry.setBinaryMode( wBinaryMode.getSelection() );
-    jobEntry.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+    jobEntry.getConnectionProperties().setBinaryMode( wBinaryMode.getSelection() );
+    jobEntry.getConnectionProperties().setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
     jobEntry.setRemove( wRemove.getSelection() );
     jobEntry.setOnlyGettingNewFiles( wOnlyNew.getSelection() );
-    jobEntry.setActiveConnection( wActive.getSelection() );
-    jobEntry.setControlEncoding( wControlEncoding.getText() );
+    jobEntry.getConnectionProperties().setActiveConnection( wActive.getSelection() );
+    jobEntry.getConnectionProperties().setControlEncoding( wControlEncoding.getText() );
     jobEntry.setMoveFiles( wMove.getSelection() );
     jobEntry.setMoveToDirectory( wMoveToDirectory.getText() );
 
@@ -1628,15 +1697,15 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     jobEntry.setAddToResult( wAddFilenameToResult.getSelection() );
     jobEntry.setCreateMoveFolder( wCreateMoveFolder.getSelection() );
 
-    jobEntry.setProxyHost( wProxyHost.getText() );
-    jobEntry.setProxyPort( wProxyPort.getText() );
-    jobEntry.setProxyUsername( wProxyUsername.getText() );
-    jobEntry.setProxyPassword( wProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setProxyHost( wProxyHost.getText() );
+    jobEntry.getConnectionProperties().setProxyPort( wProxyPort.getText() );
+    jobEntry.getConnectionProperties().setProxyUsername( wProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setProxyPassword( wProxyPassword.getText() );
 
-    jobEntry.setSocksProxyHost( wSocksProxyHost.getText() );
-    jobEntry.setSocksProxyPort( wSocksProxyPort.getText() );
-    jobEntry.setSocksProxyUsername( wSocksProxyUsername.getText() );
-    jobEntry.setSocksProxyPassword( wSocksProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyHost( wSocksProxyHost.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPort( wSocksProxyPort.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyUsername( wSocksProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPassword( wSocksProxyPassword.getText() );
 
     if ( wIfFileExists.getSelectionIndex() == 1 ) {
       jobEntry.ifFileExists = jobEntry.ifFileExistsCreateUniq;
@@ -1660,18 +1729,6 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     }
 
     dispose();
-  }
-
-  private void closeFTPConnection() {
-    // Close FTP connection if necessary
-    if ( ftpclient != null && ftpclient.connected() ) {
-      try {
-        ftpclient.quit();
-        ftpclient = null;
-      } catch ( Exception e ) {
-        // Ignore errors
-      }
-    }
   }
 
   public boolean evaluates() {

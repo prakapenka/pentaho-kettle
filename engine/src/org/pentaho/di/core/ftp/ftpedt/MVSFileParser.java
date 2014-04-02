@@ -20,7 +20,7 @@
  *
  ******************************************************************************/
 
-package org.pentaho.di.job.entries.ftp;
+package org.pentaho.di.core.ftp.ftpedt;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -30,6 +30,7 @@ import java.util.StringTokenizer;
 
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.i18n.BaseMessages;
+import org.pentaho.di.job.entries.ftp.JobEntryFTP;
 
 import com.enterprisedt.net.ftp.FTPFile;
 import com.enterprisedt.net.ftp.FTPFileParser;
@@ -65,7 +66,8 @@ import com.enterprisedt.net.ftp.FTPFileParser;
 
 public class MVSFileParser extends FTPFileParser {
 
-  private static Class<?> PKG = MVSFileParser.class; // for i18n purposes, needed by Translator2!!
+  //this is where this class was originally reside, before move to ftp commons 
+  private static Class<?> PKG = JobEntryFTP.class; // for i18n purposes, needed by Translator2!!
 
   /*** DO NOT TRANSLATE THESE ***/
   private static final String PARSER_KEY = "MVS";
