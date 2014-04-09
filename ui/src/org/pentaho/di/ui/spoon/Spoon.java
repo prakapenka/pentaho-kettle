@@ -285,6 +285,7 @@ import org.pentaho.di.ui.spoon.dialog.AnalyseImpactProgressDialog;
 import org.pentaho.di.ui.spoon.dialog.CheckTransProgressDialog;
 import org.pentaho.di.ui.spoon.dialog.LogSettingsDialog;
 import org.pentaho.di.ui.spoon.dialog.MetaStoreExplorerDialog;
+import org.pentaho.di.ui.spoon.dialog.OneSpoonInstanceDialog;
 import org.pentaho.di.ui.spoon.dialog.SaveProgressDialog;
 import org.pentaho.di.ui.spoon.dialog.TipsDialog;
 import org.pentaho.di.ui.spoon.job.JobGraph;
@@ -599,9 +600,21 @@ public class Spoon extends ApplicationWindow implements AddUndoPositionInterface
         display = new Display();
       }
 
+      PropsUI.init( display, Props.TYPE_PROPERTIES_SPOON );
+      if ( !InstanceLock.getInstance().tryLock( log ) ) {
+        // seems another instance is running
+        // since user is not explicitly refused
+        // warn him about race conditions,  see PDI-3748
+        OneSpoonInstanceDialog dialog = new OneSpoonInstanceDialog( new Shell( display ) );
+        dialog.open();
+        if ( dialog.isBreakExecution() ) {
+          // badaboooom!
+          System.exit( 0 );
+        }
+      }
+
       // Note: this needs to be done befre the look and feel is set
       OsHelper.initOsHandlers( display );
-
       UIManager.setLookAndFeel( new MetalLookAndFeel() );
 
       // The core plugin types don't know about UI classes. Add them in now
@@ -616,8 +629,6 @@ public class Spoon extends ApplicationWindow implements AddUndoPositionInterface
       if ( registryException != null ) {
         throw registryException;
       }
-
-      PropsUI.init( display, Props.TYPE_PROPERTIES_SPOON );
 
       KettleLogStore.init( PropsUI.getInstance().getMaxNrLinesInLog(), PropsUI
         .getInstance().getMaxLogLineTimeoutMinutes() );
@@ -651,6 +662,9 @@ public class Spoon extends ApplicationWindow implements AddUndoPositionInterface
         log.logError( "Fatal error : " + Const.NVL( t.toString(), Const.NVL( t.getMessage(), "Unknown error" ) ) );
         log.logError( Const.getStackTracker( t ) );
       }
+    } finally {
+      // finally unlock kettle home folder
+      InstanceLock.getInstance().unlock();
     }
 
     // Kill all remaining things in this VM!
