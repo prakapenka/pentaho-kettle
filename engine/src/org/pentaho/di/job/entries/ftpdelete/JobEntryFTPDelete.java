@@ -74,10 +74,10 @@ import com.trilead.ssh2.SFTPv3DirectoryEntry;
 
 /**
  * This defines an FTP job entry.
- *
+ * 
  * @author Matt
  * @since 05-11-2003
- *
+ * 
  */
 public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEntryInterface {
   private static Class<?> PKG = JobEntryFTPDelete.class; // for i18n purposes, needed by Translator2!!
@@ -99,9 +99,9 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
   private String protocol;
 
   public static final String PROTOCOL_FTP = "FTP";
-  
+
   public static final String PROTOCOL_FTP_EDT = "FTP edtFTPj (Deprecated)";
-  
+
   public static final String PROTOCOL_FTP_COM = "FTP Apache Commons Net";
 
   public static final String PROTOCOL_FTPS = "FTPS";
@@ -178,8 +178,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     retval.append( "      " ).append( XMLHandler.addTagValue( "port", connectionProperties.getPort() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "username", connectionProperties.getUserName() ) );
     retval.append( "      " ).append(
-      XMLHandler.addTagValue( "password", Encr.encryptPasswordIfNotUsingVariables(
-          connectionProperties.getPassword() ) ) );
+        XMLHandler.addTagValue( "password", Encr
+            .encryptPasswordIfNotUsingVariables( connectionProperties.getPassword() ) ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "ftpdirectory", ftpDirectory ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "wildcard", wildcard ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "timeout", connectionProperties.getTimeout() ) );
@@ -188,10 +188,11 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     retval.append( "      " ).append( XMLHandler.addTagValue( "useproxy", useproxy ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_host", connectionProperties.getProxyHost() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_port", connectionProperties.getProxyPort() ) );
-    retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_username", connectionProperties.getProxyUsername() ) );
     retval.append( "      " ).append(
-      XMLHandler.addTagValue( "proxy_password", Encr.encryptPasswordIfNotUsingVariables(
-          connectionProperties.getProxyPassword() ) ) );
+        XMLHandler.addTagValue( "proxy_username", connectionProperties.getProxyUsername() ) );
+    retval.append( "      " ).append(
+        XMLHandler.addTagValue( "proxy_password", Encr.encryptPasswordIfNotUsingVariables( connectionProperties
+            .getProxyPassword() ) ) );
 
     retval.append( "      " ).append( XMLHandler.addTagValue( "publicpublickey", publicpublickey ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "keyfilename", keyFilename ) );
@@ -201,26 +202,25 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     retval.append( "      " ).append( XMLHandler.addTagValue( "success_condition", success_condition ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "copyprevious", copyprevious ) );
     retval.append( "      " ).append(
-      XMLHandler
-        .addTagValue( "ftps_connection_type", FTPSConnection.getConnectionTypeCode( FTPSConnectionType ) ) );
+        XMLHandler.addTagValue( "ftps_connection_type", FTPSConnection.getConnectionTypeCode( FTPSConnectionType ) ) );
 
-    retval.append( "      " ).append( XMLHandler.addTagValue( "socksproxy_host",
-        connectionProperties.getSocksProxyHost() ) );
-    retval.append( "      " ).append( XMLHandler.addTagValue( "socksproxy_port",
-        connectionProperties.getSocksProxyPort() ) );
-    retval.append( "      " ).append( XMLHandler.addTagValue( "socksproxy_username",
-        connectionProperties.getSocksProxyUsername() ) );
     retval.append( "      " ).append(
-      XMLHandler.addTagValue( "socksproxy_password", Encr
-        .encryptPasswordIfNotUsingVariables( connectionProperties.getSocksProxyPassword() ) ) );
+        XMLHandler.addTagValue( "socksproxy_host", connectionProperties.getSocksProxyHost() ) );
+    retval.append( "      " ).append(
+        XMLHandler.addTagValue( "socksproxy_port", connectionProperties.getSocksProxyPort() ) );
+    retval.append( "      " ).append(
+        XMLHandler.addTagValue( "socksproxy_username", connectionProperties.getSocksProxyUsername() ) );
+    retval.append( "      " ).append(
+        XMLHandler.addTagValue( "socksproxy_password", Encr.encryptPasswordIfNotUsingVariables( connectionProperties
+            .getSocksProxyPassword() ) ) );
 
     connectionProperties.setVariableSpace( var );
 
     return retval.toString();
   }
 
-  public void loadXML( Node entrynode, List<DatabaseMeta> databases, List<SlaveServer> slaveServers,
-    Repository rep, IMetaStore metaStore ) throws KettleXMLException {
+  public void loadXML( Node entrynode, List<DatabaseMeta> databases, List<SlaveServer> slaveServers, Repository rep,
+      IMetaStore metaStore ) throws KettleXMLException {
     try {
       super.loadXML( entrynode, databases, slaveServers );
 
@@ -228,20 +228,19 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       connectionProperties.setPort( XMLHandler.getTagValue( entrynode, "port" ) );
       connectionProperties.setServerName( XMLHandler.getTagValue( entrynode, "servername" ) );
       connectionProperties.setUserName( XMLHandler.getTagValue( entrynode, "username" ) );
-      connectionProperties.setPassword( Encr.decryptPasswordOptionallyEncrypted(
-          XMLHandler.getTagValue( entrynode, "password" ) ) );
+      connectionProperties.setPassword( Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue( entrynode,
+          "password" ) ) );
       ftpDirectory = XMLHandler.getTagValue( entrynode, "ftpdirectory" );
       wildcard = XMLHandler.getTagValue( entrynode, "wildcard" );
       connectionProperties.setTimeout( Const.toInt( XMLHandler.getTagValue( entrynode, "timeout" ), 10000 ) );
-      connectionProperties.setActiveConnection(
-            "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "active" ) ) );
+      connectionProperties.setActiveConnection( "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "active" ) ) );
 
       useproxy = "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "useproxy" ) );
       connectionProperties.setProxyHost( XMLHandler.getTagValue( entrynode, "proxy_host" ) );
       connectionProperties.setProxyPort( XMLHandler.getTagValue( entrynode, "proxy_port" ) );
       connectionProperties.setProxyUsername( XMLHandler.getTagValue( entrynode, "proxy_username" ) );
-      connectionProperties.setProxyPassword(
-        Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue( entrynode, "proxy_password" ) ) );
+      connectionProperties.setProxyPassword( Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue(
+          entrynode, "proxy_password" ) ) );
 
       publicpublickey = "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "publicpublickey" ) );
       keyFilename = XMLHandler.getTagValue( entrynode, "keyfilename" );
@@ -251,13 +250,13 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       success_condition = XMLHandler.getTagValue( entrynode, "success_condition" );
       copyprevious = "Y".equalsIgnoreCase( XMLHandler.getTagValue( entrynode, "copyprevious" ) );
       FTPSConnectionType =
-        FTPSConnection.getConnectionTypeByCode( Const.NVL( XMLHandler.getTagValue(
-          entrynode, "ftps_connection_type" ), "" ) );
+          FTPSConnection.getConnectionTypeByCode( Const.NVL(
+              XMLHandler.getTagValue( entrynode, "ftps_connection_type" ), "" ) );
       connectionProperties.setSocksProxyHost( XMLHandler.getTagValue( entrynode, "socksproxy_host" ) );
       connectionProperties.setSocksProxyPort( XMLHandler.getTagValue( entrynode, "socksproxy_port" ) );
       connectionProperties.setSocksProxyUsername( XMLHandler.getTagValue( entrynode, "socksproxy_username" ) );
-      connectionProperties.setSocksProxyPassword(
-        Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue( entrynode, "socksproxy_password" ) ) );
+      connectionProperties.setSocksProxyPassword( Encr.decryptPasswordOptionallyEncrypted( XMLHandler.getTagValue(
+          entrynode, "socksproxy_password" ) ) );
 
     } catch ( KettleXMLException xe ) {
       throw new KettleXMLException( "Unable to load job entry of type 'ftp' from XML node", xe );
@@ -265,14 +264,14 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
   }
 
   public void loadRep( Repository rep, IMetaStore metaStore, ObjectId id_jobentry, List<DatabaseMeta> databases,
-    List<SlaveServer> slaveServers ) throws KettleException {
+      List<SlaveServer> slaveServers ) throws KettleException {
     try {
       protocol = rep.getJobEntryAttributeString( id_jobentry, "protocol" );
       connectionProperties.setPort( rep.getJobEntryAttributeString( id_jobentry, "port" ) );
       connectionProperties.setServerName( rep.getJobEntryAttributeString( id_jobentry, "servername" ) );
       connectionProperties.setUserName( rep.getJobEntryAttributeString( id_jobentry, "username" ) );
-      connectionProperties.setPassword(
-        Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString( id_jobentry, "password" ) ) );
+      connectionProperties.setPassword( Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString(
+          id_jobentry, "password" ) ) );
       ftpDirectory = rep.getJobEntryAttributeString( id_jobentry, "ftpdirectory" );
       wildcard = rep.getJobEntryAttributeString( id_jobentry, "wildcard" );
       connectionProperties.setTimeout( (int) rep.getJobEntryAttributeInteger( id_jobentry, "timeout" ) );
@@ -284,8 +283,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       connectionProperties.setProxyHost( rep.getJobEntryAttributeString( id_jobentry, "proxy_host" ) );
       connectionProperties.setProxyPort( rep.getJobEntryAttributeString( id_jobentry, "proxy_port" ) );
       connectionProperties.setProxyUsername( rep.getJobEntryAttributeString( id_jobentry, "proxy_username" ) );
-      connectionProperties.setProxyPassword(
-          Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString( id_jobentry, "proxy_password" ) ) );
+      connectionProperties.setProxyPassword( Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString(
+          id_jobentry, "proxy_password" ) ) );
 
       publicpublickey = rep.getJobEntryAttributeBoolean( id_jobentry, "publicpublickey" );
       keyFilename = rep.getJobEntryAttributeString( id_jobentry, "keyfilename" );
@@ -294,19 +293,18 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       nr_limit_success = rep.getJobEntryAttributeString( id_jobentry, "nr_limit_success" );
       success_condition = rep.getJobEntryAttributeString( id_jobentry, "success_condition" );
       FTPSConnectionType =
-        FTPSConnection.getConnectionTypeByCode( Const.NVL( rep.getJobEntryAttributeString(
-          id_jobentry, "ftps_connection_type" ), "" ) );
+          FTPSConnection.getConnectionTypeByCode( Const.NVL( rep.getJobEntryAttributeString( id_jobentry,
+              "ftps_connection_type" ), "" ) );
 
       connectionProperties.setSocksProxyHost( rep.getJobEntryAttributeString( id_jobentry, "socksproxy_host" ) );
       connectionProperties.setSocksProxyPort( rep.getJobEntryAttributeString( id_jobentry, "socksproxy_port" ) );
       connectionProperties.setSocksProxyUsername(
-          rep.getJobEntryAttributeString( id_jobentry, "socksproxy_username" ) );
-      connectionProperties.setSocksProxyPassword(
-        Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString(
-          id_jobentry, "socksproxy_password" ) ) );
+            rep.getJobEntryAttributeString( id_jobentry, "socksproxy_username" ) );
+      connectionProperties.setSocksProxyPassword( Encr.decryptPasswordOptionallyEncrypted( rep
+          .getJobEntryAttributeString( id_jobentry, "socksproxy_password" ) ) );
     } catch ( KettleException dbe ) {
       throw new KettleException( "Unable to load job entry of type 'ftp' from the repository for id_jobentry="
-        + id_jobentry, dbe );
+          + id_jobentry, dbe );
     }
   }
 
@@ -320,7 +318,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       rep.saveJobEntryAttribute( id_job, getObjectId(), "servername", connectionProperties.getServerName() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "username", connectionProperties.getUserName() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "password", Encr
-        .encryptPasswordIfNotUsingVariables( connectionProperties.getPassword() ) );
+          .encryptPasswordIfNotUsingVariables( connectionProperties.getPassword() ) );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "ftpdirectory", ftpDirectory );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "wildcard", wildcard );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "timeout", connectionProperties.getTimeout() );
@@ -337,23 +335,22 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_port", connectionProperties.getProxyPort() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_username", connectionProperties.getProxyUsername() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_password", Encr
-        .encryptPasswordIfNotUsingVariables( connectionProperties.getProxyPassword() ) );
+          .encryptPasswordIfNotUsingVariables( connectionProperties.getProxyPassword() ) );
 
       rep.saveJobEntryAttribute( id_job, getObjectId(), "nr_limit_success", nr_limit_success );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "success_condition", success_condition );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "ftps_connection_type", FTPSConnection
-        .getConnectionType( FTPSConnectionType ) );
+          .getConnectionType( FTPSConnectionType ) );
 
       rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_host", connectionProperties.getSocksProxyHost() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_port", connectionProperties.getSocksProxyPort() );
-      rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_username",
-          connectionProperties.getSocksProxyUsername() );
+      rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_username", connectionProperties
+          .getSocksProxyUsername() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_password", Encr
-        .encryptPasswordIfNotUsingVariables( connectionProperties.getSocksProxyPassword() ) );
+          .encryptPasswordIfNotUsingVariables( connectionProperties.getSocksProxyPassword() ) );
 
     } catch ( KettleDatabaseException dbe ) {
-      throw new KettleException(
-        "Unable to save job entry of type 'ftp' to the repository for id_job=" + id_job, dbe );
+      throw new KettleException( "Unable to save job entry of type 'ftp' to the repository for id_job=" + id_job, dbe );
     } finally {
       connectionProperties.setVariableSpace( vs );
     }
@@ -363,8 +360,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     boolean retval = false;
 
     if ( ( NrErrors == 0 && getSuccessCondition().equals( SUCCESS_IF_ALL_FILES_DOWNLOADED ) )
-      || ( NrfilesDeleted >= limitFiles && getSuccessCondition().equals( SUCCESS_IF_AT_LEAST_X_FILES_DOWNLOADED ) )
-      || ( NrErrors <= limitFiles && getSuccessCondition().equals( SUCCESS_IF_ERRORS_LESS ) ) ) {
+        || ( NrfilesDeleted >= limitFiles && getSuccessCondition().equals( SUCCESS_IF_AT_LEAST_X_FILES_DOWNLOADED ) )
+        || ( NrErrors <= limitFiles && getSuccessCondition().equals( SUCCESS_IF_ERRORS_LESS ) ) ) {
       retval = true;
     }
 
@@ -470,69 +467,12 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     this.ftpDirectory = directory;
   }
 
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @return Returns the password.
-   */
-  @Deprecated
-  public String getPassword() {
-    return this.connectionProperties.getPassword();
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @param password
-   *          The password to set.
-   */
-  @Deprecated
-  public void setPassword( String password ) {
-    this.connectionProperties.setPassword( password );
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @return Returns the serverName.
-   */
-  @Deprecated
-  public String getServerName() {
-    return this.connectionProperties.getServerName();
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @param serverName
-   *          The serverName to set.
-   */
-  @Deprecated
-  public void setServerName( String serverName ) {
-    this.connectionProperties.setServerName( serverName );
-  }
-
   public void setProtocol( String protocol ) {
     this.protocol = protocol;
   }
 
   public String getProtocol() {
     return protocol;
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @return Returns the userName.
-   */
-  @Deprecated
-  public String getUserName() {
-    return this.connectionProperties.getUserName();
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @param userName
-   *          The userName to set.
-   */
-  @Deprecated
-  public void setUserName( String userName ) {
-    this.connectionProperties.setUserName( userName );
   }
 
   /**
@@ -550,44 +490,6 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     this.wildcard = wildcard;
   }
 
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @param timeout
-   *          The timeout to set.
-   */
-  @Deprecated
-  public void setTimeout( int timeout ) {
-    this.connectionProperties.setTimeout( timeout );
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @return Returns the timeout.
-   */
-  @Deprecated
-  public int getTimeout() {
-    return this.connectionProperties.getTimeout();
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @return Returns the hostname of the ftp-proxy.
-   */
-  @Deprecated
-  public String getProxyHost() {
-    return this.connectionProperties.getProxyHost();
-  }
-
-  /**
-   * Use {@link #getConnectionProperties()}
-   * @param proxyHost
-   *          The hostname of the proxy.
-   */
-  @Deprecated
-  public void setProxyHost( String proxyHost ) {
-    this.connectionProperties.setProxyHost( proxyHost );
-  }
-
   public boolean isUseProxy() {
     return useproxy;
   }
@@ -596,8 +498,9 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     this.useproxy = useproxy;
   }
 
-  //TODO logging for deleted files?
-  /** Needed for the Vector coming from sshclient.ls() *
+  // TODO logging for deleted files?
+  /**
+   * Needed for the Vector coming from sshclient.ls() *
    */
   @SuppressWarnings( "unchecked" )
   public Result execute( Result previousResult, int nr ) {
@@ -650,14 +553,13 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       // Get all the files in the current directory...
       String[] filelist = null;
       if ( protocol.equals( PROTOCOL_FTP ) || protocol.equals( PROTOCOL_FTP_EDT )
-            || protocol.equals( PROTOCOL_FTP_COM ) ) {
-        // this is workaround for exisitin scope of ftps... etc implementations:
+          || protocol.equals( PROTOCOL_FTP_COM ) ) {
+        // this is workaround for exist scope of ftps... etc implementations:
         boolean old = false;
         old = protocol.equals( PROTOCOL_FTP ) || protocol.equals( PROTOCOL_FTP_EDT );
-        connectionProperties.setImplementation( old ? FTPImplementations.FTPEDT : FTPImplementations.APACHE_CN  );
-        FTPConnect(
-          realservername, realUsername, realPassword, realserverport, realFtpDirectory, realproxyhost,
-          realproxyusername, realproxypassword, realproxyport, connectionProperties.getTimeout() );
+        connectionProperties.setImplementation( old ? FTPImplementations.FTPEDT : FTPImplementations.APACHE_CN );
+        FTPConnect( realservername, realUsername, realPassword, realserverport, realFtpDirectory, realproxyhost,
+            realproxyusername, realproxypassword, realproxyport, connectionProperties.getTimeout() );
 
         filelist = ftpclient.dir();
 
@@ -675,8 +577,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
         }
       } else if ( protocol.equals( PROTOCOL_FTPS ) ) {
         // establish the secure connection
-        FTPSConnect( realservername, realUsername, realserverport, realPassword, realFtpDirectory,
-            connectionProperties.getTimeout() );
+        FTPSConnect( realservername, realUsername, realserverport, realPassword, realFtpDirectory, connectionProperties
+            .getTimeout() );
         // Get all the files in the current directory...
         filelist = ftpsclient.getFileNames();
       } else if ( protocol.equals( PROTOCOL_SFTP ) ) {
@@ -687,9 +589,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
         filelist = sftpclient.dir();
       } else if ( protocol.equals( PROTOCOL_SSH ) ) {
         // establish the secure connection
-        SSHConnect(
-          realservername, realserverpassword, realserverport, realUsername, realPassword, realproxyhost,
-          realproxyusername, realproxypassword, realproxyport, realkeyFilename, realkeyPass );
+        SSHConnect( realservername, realserverpassword, realserverport, realUsername, realPassword, realproxyhost,
+            realproxyusername, realproxypassword, realproxyport, realkeyFilename, realkeyPass );
 
         sourceFolder = ".";
         if ( realFtpDirectory != null ) {
@@ -708,9 +609,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
           while ( iterator.hasNext() ) {
             SFTPv3DirectoryEntry dirEntry = iterator.next();
 
-            if ( dirEntry != null
-              && !dirEntry.filename.equals( "." ) && !dirEntry.filename.equals( ".." )
-              && !isDirectory( sshclient, sourceFolder + dirEntry.filename ) ) {
+            if ( dirEntry != null && !dirEntry.filename.equals( "." ) && !dirEntry.filename.equals( ".." )
+                && !isDirectory( sshclient, sourceFolder + dirEntry.filename ) ) {
               fileCount++;
             }
           }
@@ -722,9 +622,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
           while ( iterator.hasNext() ) {
             SFTPv3DirectoryEntry dirEntry = iterator.next();
 
-            if ( dirEntry != null
-              && !dirEntry.filename.equals( "." ) && !dirEntry.filename.equals( ".." )
-              && !isDirectory( sshclient, sourceFolder + dirEntry.filename ) ) {
+            if ( dirEntry != null && !dirEntry.filename.equals( "." ) && !dirEntry.filename.equals( ".." )
+                && !isDirectory( sshclient, sourceFolder + dirEntry.filename ) ) {
               filelist[i] = dirEntry.filename;
               i++;
             }
@@ -733,7 +632,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       }
 
       if ( isDetailed() ) {
-        logDetailed( "JobEntryFTPDelete.FoundNFiles", String.valueOf( filelist.length ) );
+        logDetailed( BaseMessages.getString( PKG, "JobEntryFTPDelete.FoundNFiles",
+            String.valueOf( filelist.length ) ) );
       }
       int found = filelist == null ? 0 : filelist.length;
       if ( found == 0 ) {
@@ -792,8 +692,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
           if ( getIt ) {
             // Delete file
-            if ( protocol.equals( PROTOCOL_FTP )
-                || protocol.equals( PROTOCOL_FTP_COM )
+            if ( protocol.equals( PROTOCOL_FTP ) || protocol.equals( PROTOCOL_FTP_COM )
                 || protocol.equals( PROTOCOL_FTP_EDT ) ) {
               ftpclient.delete( filelist[i] );
             }
@@ -806,7 +705,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
               sshclient.rm( sourceFolder + filelist[i] );
             }
             if ( isDetailed() ) {
-              logDetailed( BaseMessages.getString( PKG, "JobEntryFTPDelete.RemotefileDeleted" ), filelist[i] );
+              logDetailed( BaseMessages.getString( PKG, "JobEntryFTPDelete.RemotefileDeleted", filelist[i] ) );
             }
             updateDeletedFiles();
           }
@@ -863,7 +762,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Checks if file is a directory
-   *
+   * 
    * @param sftpClient
    * @param filename
    * @return true, if filename is a directory
@@ -877,9 +776,9 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     return false;
   }
 
-  private void SSHConnect( String realservername, String realserverpassword, int realserverport,
-    String realUsername, String realPassword, String realproxyhost, String realproxyusername,
-    String realproxypassword, int realproxyport, String realkeyFilename, String realkeyPass ) throws Exception {
+  private void SSHConnect( String realservername, String realserverpassword, int realserverport, String realUsername,
+      String realPassword, String realproxyhost, String realproxyusername, String realproxypassword, int realproxyport,
+      String realkeyFilename, String realkeyPass ) throws Exception {
 
     /* Create a connection instance */
 
@@ -892,14 +791,13 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
       /* Now connect */
       // if the proxy requires basic authentication:
       if ( !Const.isEmpty( realproxyusername ) || !Const.isEmpty( realproxypassword ) ) {
-        conn
-          .setProxyData( new HTTPProxyData( realproxyhost, realproxyport, realproxyusername, realproxypassword ) );
+        conn.setProxyData( new HTTPProxyData( realproxyhost, realproxyport, realproxyusername, realproxypassword ) );
       }
     }
 
     if ( connectionProperties.getTimeout() > 0 ) {
       // Use timeout
-      //TODO *1000 ?
+      // TODO *1000 ?
       conn.connect( null, 0, connectionProperties.getTimeout() * 1000 );
 
     } else {
@@ -925,7 +823,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
   }
 
   private void SFTPConnect( String realservername, String realusername, int realport, String realpassword,
-    String realFTPDirectory ) throws Exception {
+      String realFTPDirectory ) throws Exception {
     // Create sftp client to host ...
     sftpclient = new SFTPClient( InetAddress.getByName( realservername ), realport, realusername );
 
@@ -943,10 +841,9 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
   }
 
   private void FTPSConnect( String realservername, String realusername, int realport, String realpassword,
-    String realFTPDirectory, int realtimeout ) throws Exception {
+      String realFTPDirectory, int realtimeout ) throws Exception {
     // Create ftps client to host ...
-    ftpsclient =
-      new FTPSConnection( getFTPSConnectionType(), realservername, realport, realusername, realpassword );
+    ftpsclient = new FTPSConnection( getFTPSConnectionType(), realservername, realport, realusername, realpassword );
 
     if ( !Const.isEmpty( connectionProperties.getProxyHost() ) ) {
       String realProxy_host = connectionProperties.getProxyHost();
@@ -1004,8 +901,8 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
   }
 
   private void FTPConnect( String realServername, String realusername, String realpassword, int realport,
-    String realFtpDirectory, String realProxyhost, String realproxyusername, String realproxypassword,
-    int realproxyport, int realtimeout ) throws Exception {
+      String realFtpDirectory, String realProxyhost, String realproxyusername, String realproxypassword,
+      int realproxyport, int realtimeout ) throws Exception {
 
     // this is workaround since for delete option
     // proxy host should not be empty and checkbox should be selected:
@@ -1020,7 +917,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     }
 
     // Create ftp client to host:port ...
-    FTPClientFactory factory = new FTPClientFactory( log, PKG );
+    FTPClientFactory factory = new FTPClientFactory( log );
     ftpclient = factory.getFtpClientInitialized( connectionProperties );
     // restore values after connection established
     if ( !useproxy ) {
@@ -1057,11 +954,11 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     return true;
   }
 
-  public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
-    Repository repository, IMetaStore metaStore ) {
+  public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space, Repository repository,
+      IMetaStore metaStore ) {
     andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );
-    andValidator().validate(
-      this, "targetDirectory", remarks, putValidators( notBlankValidator(), fileExistsValidator() ) );
+    andValidator().validate( this, "targetDirectory", remarks,
+        putValidators( notBlankValidator(), fileExistsValidator() ) );
     andValidator().validate( this, "userName", remarks, putValidators( notBlankValidator() ) );
     andValidator().validate( this, "password", remarks, putValidators( notNullValidator() ) );
   }
@@ -1081,15 +978,127 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
     return references;
   }
 
-  /**
-   * @return the connectionProperties
-   */
   public FTPConnectionProperites getConnectionProperties() {
     return connectionProperties;
   }
 
   /**
+   * For junit testing purposes (bean validation). Use at your own risk. No guarantee.
+   * 
+   * @param connectionProperties
+   */
+  public void setConnectionProperties( FTPConnectionProperites connectionProperties ) {
+    this.connectionProperties = connectionProperties;
+  }
+
+  /**
    * Use {@link #getConnectionProperties()}
+   * 
+   * @param timeout
+   *          The timeout to set.
+   */
+  @Deprecated
+  public void setTimeout( int timeout ) {
+    this.connectionProperties.setTimeout( timeout );
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @return Returns the timeout.
+   */
+  @Deprecated
+  public int getTimeout() {
+    return this.connectionProperties.getTimeout();
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @return Returns the hostname of the ftp-proxy.
+   */
+  @Deprecated
+  public String getProxyHost() {
+    return this.connectionProperties.getProxyHost();
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @param proxyHost
+   *          The hostname of the proxy.
+   */
+  @Deprecated
+  public void setProxyHost( String proxyHost ) {
+    this.connectionProperties.setProxyHost( proxyHost );
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @return Returns the userName.
+   */
+  @Deprecated
+  public String getUserName() {
+    return this.connectionProperties.getUserName();
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @param userName
+   *          The userName to set.
+   */
+  @Deprecated
+  public void setUserName( String userName ) {
+    this.connectionProperties.setUserName( userName );
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @return Returns the password.
+   */
+  @Deprecated
+  public String getPassword() {
+    return this.connectionProperties.getPassword();
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @param password
+   *          The password to set.
+   */
+  @Deprecated
+  public void setPassword( String password ) {
+    this.connectionProperties.setPassword( password );
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @return Returns the serverName.
+   */
+  @Deprecated
+  public String getServerName() {
+    return this.connectionProperties.getServerName();
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
+   * @param serverName
+   *          The serverName to set.
+   */
+  @Deprecated
+  public void setServerName( String serverName ) {
+    this.connectionProperties.setServerName( serverName );
+  }
+
+  /**
+   * Use {@link #getConnectionProperties()}
+   * 
    * @return Returns the password which is used to authenticate at the proxy.
    */
   @Deprecated
@@ -1099,6 +1108,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @param proxyPassword
    *          The password which is used to authenticate at the proxy.
    */
@@ -1109,15 +1119,17 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Returns the port of the ftp.
    */
   @Deprecated
   public String getPort() {
-    return String.valueOf(  this.connectionProperties.getPort() );
+    return String.valueOf( this.connectionProperties.getPort() );
   }
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @param proxyPort
    *          The port of the ftp.
    */
@@ -1128,6 +1140,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Returns the port of the ftp-proxy.
    */
   @Deprecated
@@ -1137,6 +1150,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @param proxyPort
    *          The port of the ftp-proxy.
    */
@@ -1147,6 +1161,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Returns the username which is used to authenticate at the proxy.
    */
   @Deprecated
@@ -1156,6 +1171,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @param proxyUsername
    *          The username which is used to authenticate at the proxy.
    */
@@ -1166,6 +1182,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return the activeConnection
    */
   @Deprecated
@@ -1175,6 +1192,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @param activeConnection
    *          the activeConnection to set
    */
@@ -1185,6 +1203,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Socks proxy host
    */
   @Deprecated
@@ -1194,6 +1213,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Socks proxy port
    */
   @Deprecated
@@ -1203,6 +1223,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Socks proxy username
    */
   @Deprecated
@@ -1212,6 +1233,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Socks proxy password
    */
   @Deprecated
@@ -1221,6 +1243,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Sets socks proxy host
    */
   @Deprecated
@@ -1230,6 +1253,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Sets socks proxy port
    */
   @Deprecated
@@ -1239,6 +1263,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Sets socks proxy username
    */
   @Deprecated
@@ -1248,6 +1273,7 @@ public class JobEntryFTPDelete extends JobEntryBase implements Cloneable, JobEnt
 
   /**
    * Use {@link #getConnectionProperties()}
+   * 
    * @return Sets socks proxy password
    */
   @Deprecated

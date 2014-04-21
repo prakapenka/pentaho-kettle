@@ -9,7 +9,8 @@ import org.pentaho.di.core.variables.VariableSpace;
  * 
  * 
  */
-public class FTPConnectionProperites {
+//TODO implement equals and hashcode
+public final class FTPConnectionProperites {
 
   private VariableSpace variableSpace;
 
@@ -311,5 +312,11 @@ public class FTPConnectionProperites {
    */
   public void setVariableSpace( VariableSpace variableSpace ) {
     this.variableSpace = variableSpace;
+  }
+
+  //TODO implement for logging usage
+  @Override
+  public String toString() {
+    return null;
   }
 }

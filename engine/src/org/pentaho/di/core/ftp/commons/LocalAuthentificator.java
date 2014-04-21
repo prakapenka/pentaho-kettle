@@ -6,7 +6,7 @@ import java.net.PasswordAuthentication;
 public class LocalAuthentificator extends Authenticator {
   private static LocalAuthentificator instance = new LocalAuthentificator();
 
-  // ftp connection is local to any thread
+  // ftp connection is local per thread
   private ThreadLocal<PasswordAuthentication> credentials = new ThreadLocal<PasswordAuthentication>();
 
   public static LocalAuthentificator getInstance() {

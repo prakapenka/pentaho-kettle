@@ -31,13 +31,15 @@ import org.pentaho.di.core.ftp.FTPCommonFile;
 import org.pentaho.di.core.ftp.FTPConnectionProperites;
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.i18n.BaseMessages;
+import org.pentaho.di.job.entries.ftp.JobEntryFTP;
 
 public class CommonsFTPClient implements FTPCommonClient {
 
+  private static Class<?> PKG = JobEntryFTP.class;
+
   private FTPClient ftpClient;
 
-  // TODO log?
-  public CommonsFTPClient( FTPClient ftpClient, LogChannelInterface log ) {
+  public CommonsFTPClient( FTPClient ftpClient ) {
     this.ftpClient = ftpClient;
   }
 
@@ -194,8 +196,8 @@ public class CommonsFTPClient implements FTPCommonClient {
     }
   }
 
-  public static CommonsFTPClient
-  getConnectedClient( FTPConnectionProperites info, LogChannelInterface log, Class<?> PKG ) {
+  public static CommonsFTPClient getConnectedClient( FTPConnectionProperites info, LogChannelInterface log )
+    throws FTPCommonException {
 
     // we assume to have one or anther implementation depending on
     // do we need some http proxy available.
@@ -232,7 +234,7 @@ public class CommonsFTPClient implements FTPCommonClient {
       proxy = new Proxy( Proxy.Type.SOCKS, sock );
       if ( !Const.isEmpty( info.getSocksProxyUsername() ) ) {
         // we need to provide authentication.
-        // this is thread isolated code, see SockAuthentificator implementation
+        // this is thread isolated code, see implementation
         LocalAuthentificator auth = LocalAuthentificator.getInstance();
         auth.setCredentials( info.getSocksProxyUsername(), info.getSocksProxyPassword() );
         Authenticator.setDefault( auth );
@@ -272,7 +274,6 @@ public class CommonsFTPClient implements FTPCommonClient {
 
       int reply = ftp.getReplyCode();
       if ( !FTPReply.isPositiveCompletion( reply ) ) {
-        // TODO localize?
         // usually it is failed login
         throw new FTPCommonException( "Can't connect to: " + info.getServerName() );
       }
@@ -293,21 +294,17 @@ public class CommonsFTPClient implements FTPCommonClient {
 
       logDetailed( log, BaseMessages.getString( PKG, "JobEntryFTP.LoggedIn", info.getUserName() ) );
     } catch ( Exception e ) {
-      logError( log, "Can't connect to ftp", e );
       // for example we have passed proxy but failed login to real server
       if ( ftp != null ) {
         try {
           ftp.disconnect();
         } catch ( IOException io ) {
-          io.printStackTrace();
-          // notify client some resources may not been released.
-          logError( log, "Fail to disconnect", io );
+          // we don't care for this case
         }
       }
-      return null;
+      throw new FTPCommonException( e );
     }
-
-    CommonsFTPClient cClient = new CommonsFTPClient( ftp, log );
+    CommonsFTPClient cClient = new CommonsFTPClient( ftp );
     return cClient;
   }
 
@@ -320,12 +317,12 @@ public class CommonsFTPClient implements FTPCommonClient {
 
     @Override
     public void protocolCommandSent( ProtocolCommandEvent event ) {
-      log.logRowlevel( "Issued command: " + event.getCommand() );
+      log.logRowlevel( "---> " + event.getCommand() );
     }
 
     @Override
     public void protocolReplyReceived( ProtocolCommandEvent event ) {
-      log.logRowlevel( "Recieved message: " + event.getMessage() );
+      log.logRowlevel( event.getMessage() );
     }
   }
 

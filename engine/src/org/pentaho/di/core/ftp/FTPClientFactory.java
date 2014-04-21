@@ -1,35 +1,30 @@
 package org.pentaho.di.core.ftp;
 
-import java.io.IOException;
-
 import org.pentaho.di.core.ftp.commons.CommonsFTPClient;
 import org.pentaho.di.core.ftp.ftpedt.EdtFTPClient;
 import org.pentaho.di.core.logging.LogChannelInterface;
-
-import com.enterprisedt.net.ftp.FTPException;
 
 public class FTPClientFactory {
 
   LogChannelInterface log;
   Class<?> PKG;
 
-  public FTPClientFactory( LogChannelInterface log, Class<?> PKG ) {
+  public FTPClientFactory( LogChannelInterface log ) {
     this.log = log;
-    this.PKG = PKG;
   }
 
   // usually check connection method
   public FTPCommonClient getFtpClientConnected( FTPConnectionProperites info )
-    throws FTPCommonException, FTPException, IOException {
+    throws FTPCommonException {
     FTPImplementations imp = info.getImplementation();
     switch ( imp ) {
       case AUTO :
       case FTPEDT: {
-        FTPCommonClient cl = EdtFTPClient.getConnectedClient( info, log, PKG );
+        FTPCommonClient cl = EdtFTPClient.getConnectedClient( info, log );
         return cl;
       }
       case APACHE_CN: {
-        FTPCommonClient cl = CommonsFTPClient.getConnectedClient( info, log, PKG );
+        FTPCommonClient cl = CommonsFTPClient.getConnectedClient( info, log );
         return cl;
       }
       default:
@@ -39,17 +34,17 @@ public class FTPClientFactory {
   }
 
   public FTPCommonClient getFtpClientInitialized( FTPConnectionProperites info )
-    throws FTPCommonException, FTPException, IOException {
+    throws FTPCommonException {
     FTPImplementations imp = info.getImplementation();
     switch ( imp ) {
       case AUTO:
       case FTPEDT: {
         EdtFTPClient cl =  (EdtFTPClient) getFtpClientConnected( info );
-        cl.init( log, PKG, info.getVariableSpace() );
+        cl.init( log, info.getVariableSpace() );
         return cl;
       }
       case APACHE_CN: {
-        FTPCommonClient cl = CommonsFTPClient.getConnectedClient( info, log, PKG );
+        FTPCommonClient cl = CommonsFTPClient.getConnectedClient( info, log );
         return cl;
       }
       default:

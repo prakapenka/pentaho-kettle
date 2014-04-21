@@ -52,7 +52,6 @@ import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
 import org.pentaho.di.core.ftp.FTPClientFactory;
 import org.pentaho.di.core.ftp.FTPCommonClient;
-import org.pentaho.di.core.ftp.FTPCommonException;
 import org.pentaho.di.core.ftp.FTPConnectionProperites;
 import org.pentaho.di.core.ftp.FTPImplementations;
 import org.pentaho.di.core.logging.LogChannel;
@@ -1149,7 +1148,10 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     try {
       String realfoldername = jobMeta.environmentSubstitute( wFtpDirectory.getText() );
       //TODO what if folder name is empty?
-      if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP ) ){
+      String protocol = wProtocol.getText();
+      if ( protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP )
+            || protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP_EDT )
+            || protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP_COM ) ) {
         FTPCommonClient client = connectToFTP();
         if ( client == null ) {
           folderexists = false;
@@ -1241,7 +1243,7 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
   private FTPCommonClient connectToFTP() {
     FTPCommonClient ftpclient = null;    
 
-    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI, PKG );
+    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI );
     FTPConnectionProperites prop = new FTPConnectionProperites();
     prop.setVariableSpace( jobMeta );
     // so we definitely know this is plain FTP here

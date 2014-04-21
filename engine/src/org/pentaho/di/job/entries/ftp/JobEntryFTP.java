@@ -29,8 +29,6 @@ import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notBlank
 import static org.pentaho.di.job.entry.validator.JobEntryValidatorUtils.notNullValidator;
 
 import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -83,7 +81,7 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   private static Class<?> PKG = JobEntryFTP.class; // for i18n purposes, needed by Translator2!!
 
   private FTPConnectionProperites connectionProperties;
-
+  private FTPClientFactory ftpFactory;
   private String ftpDirectory;
 
   private String targetDirectory;
@@ -164,12 +162,9 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     super( n, "" );
     connectionProperties = new FTPConnectionProperites();
     nr_limit = "10";
-    connectionProperties.setPort( "21" );
-    connectionProperties.setSocksProxyPort( "1080" );
     success_condition = SUCCESS_IF_NO_ERRORS;
     ifFileExists = ifFileExistsSkip;
     SifFileExists = SifFileExistsSkip;
-
     movefiles = false;
     movetodirectory = null;
     adddate = false;
@@ -178,7 +173,6 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     AddDateBeforeExtension = false;
     isaddresult = true;
     createmovefolder = false;
-
     connectionProperties.setControlEncoding( DEFAULT_CONTROL_ENCODING );
   }
 
@@ -198,7 +192,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     connectionProperties.setVariableSpace( null );
 
     retval.append( super.getXML() );
-    retval.append( "      " ).append( XMLHandler.addTagValue( "library", connectionProperties.getImplementation().toString() ) );
+    retval.append( "      " ).append( XMLHandler.addTagValue( "library",
+          connectionProperties.getImplementation().toString() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "port", connectionProperties.getPort() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "servername", connectionProperties.getServerName() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "username", connectionProperties.getUserName() ) );
@@ -228,7 +223,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
 
     retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_host", connectionProperties.getProxyHost() ) );
     retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_port", connectionProperties.getProxyPort() ) );
-    retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_username", connectionProperties.getProxyUsername() ) );
+    retval.append( "      " ).append( XMLHandler.addTagValue( "proxy_username",
+        connectionProperties.getProxyUsername() ) );
     retval.append( "      " ).append(
         XMLHandler.addTagValue( "proxy_password",
             Encr.encryptPasswordIfNotUsingVariables( connectionProperties.getProxyPassword() ) ) );
@@ -257,8 +253,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     try {
       super.loadXML( entrynode, databases, slaveServers );
       String implementation = XMLHandler.getTagValue( entrynode, "library" );
-      connectionProperties.setImplementation( implementation == null ?
-          FTPImplementations.FTPEDT : FTPImplementations.getByCode( implementation ) );
+      connectionProperties.setImplementation( implementation == null
+          ? FTPImplementations.FTPEDT : FTPImplementations.getByCode( implementation ) );
       connectionProperties.setPort( XMLHandler.getTagValue( entrynode, "port" ) );
       connectionProperties.setServerName( XMLHandler.getTagValue( entrynode, "servername" ) );
       connectionProperties.setUserName( XMLHandler.getTagValue( entrynode, "username" ) );
@@ -330,8 +326,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
       List<SlaveServer> slaveServers ) throws KettleException {
     try {
       String implementation = rep.getJobEntryAttributeString( id_jobentry, "library" );
-      connectionProperties.setImplementation( implementation == null ?
-          FTPImplementations.FTPEDT : FTPImplementations.getByCode( implementation ) );
+      connectionProperties.setImplementation( implementation == null
+          ? FTPImplementations.FTPEDT : FTPImplementations.getByCode( implementation ) );
 
       connectionProperties.setPort( rep.getJobEntryAttributeString( id_jobentry, "port" ) );
       connectionProperties.setServerName( rep.getJobEntryAttributeString( id_jobentry, "servername" ) );
@@ -355,17 +351,12 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
       movetodirectory = rep.getJobEntryAttributeString( id_jobentry, "movetodirectory" );
 
       adddate = rep.getJobEntryAttributeBoolean( id_jobentry, "adddate" );
-      addtime = rep.getJobEntryAttributeBoolean( id_jobentry, "adddate" );
+      addtime = rep.getJobEntryAttributeBoolean( id_jobentry, "addtime" );
       SpecifyFormat = rep.getJobEntryAttributeBoolean( id_jobentry, "SpecifyFormat" );
       date_time_format = rep.getJobEntryAttributeString( id_jobentry, "date_time_format" );
       AddDateBeforeExtension = rep.getJobEntryAttributeBoolean( id_jobentry, "AddDateBeforeExtension" );
 
-      String addToResult = rep.getStepAttributeString( id_jobentry, "add_to_result_filenames" );
-      if ( Const.isEmpty( addToResult ) ) {
-        isaddresult = true;
-      } else {
-        isaddresult = rep.getStepAttributeBoolean( id_jobentry, "add_to_result_filenames" );
-      }
+      isaddresult = rep.getJobEntryAttributeBoolean( id_jobentry, "add_to_result_filenames" );
 
       createmovefolder = rep.getJobEntryAttributeBoolean( id_jobentry, "createmovefolder" );
 
@@ -376,7 +367,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
           Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString( id_jobentry, "proxy_password" ) ) );
       connectionProperties.setSocksProxyHost( rep.getJobEntryAttributeString( id_jobentry, "socksproxy_host" ) );
       connectionProperties.setSocksProxyPort( rep.getJobEntryAttributeString( id_jobentry, "socksproxy_port" ) );
-      connectionProperties.setProxyUsername( rep.getJobEntryAttributeString( id_jobentry, "socksproxy_username" ) );
+      connectionProperties.setSocksProxyUsername( rep.getJobEntryAttributeString( id_jobentry,
+            "socksproxy_username" ) );
       connectionProperties.setSocksProxyPassword(
           Encr.decryptPasswordOptionallyEncrypted( rep.getJobEntryAttributeString( id_jobentry,
               "socksproxy_password" ) ) );
@@ -406,7 +398,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     VariableSpace var = connectionProperties.getVariableSpace();
     connectionProperties.setVariableSpace( null );
     try {
-      rep.saveJobEntryAttribute( id_job, getObjectId(), "library", connectionProperties.getImplementation().toString() );
+      rep.saveJobEntryAttribute( id_job, getObjectId(), "library",
+          connectionProperties.getImplementation().toString() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "port", connectionProperties.getPort() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "servername", connectionProperties.getServerName() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "username", connectionProperties.getUserName() );
@@ -421,7 +414,7 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
       rep.saveJobEntryAttribute( id_job, getObjectId(), "only_new", onlyGettingNewFiles );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "active", connectionProperties.isActiveConnection() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "control_encoding", connectionProperties.getControlEncoding() );
-
+      rep.saveJobEntryAttribute( id_job, getObjectId(), "add_to_result_filenames", isaddresult );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "movefiles", movefiles );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "movetodirectory", movetodirectory );
 
@@ -436,7 +429,7 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
 
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_host", connectionProperties.getProxyHost() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_port", connectionProperties.getProxyPort() );
-      rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_username", connectionProperties.getUserName() );
+      rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_username", connectionProperties.getProxyUsername() );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "proxy_password", Encr
           .encryptPasswordIfNotUsingVariables( connectionProperties.getProxyPassword() ) );
       rep.saveJobEntryAttribute( id_job, getObjectId(), "socksproxy_host", connectionProperties.getSocksProxyHost() );
@@ -532,114 +525,75 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     this.date_time_format = date_time_format;
   }
 
-  /**
-   * @return Returns the movefiles.
-   */
   public boolean isMoveFiles() {
     return movefiles;
   }
 
-  /**
-   * @param movefilesin
-   *          The movefiles to set.
-   */
   public void setMoveFiles( boolean movefilesin ) {
     this.movefiles = movefilesin;
   }
 
-  /**
-   * @return Returns the movetodirectory.
-   */
   public String getMoveToDirectory() {
     return movetodirectory;
   }
 
-  /**
-   * @param movetoin
-   *          The movetodirectory to set.
-   */
   public void setMoveToDirectory( String movetoin ) {
     this.movetodirectory = movetoin;
   }
 
-  /**
-   * @return Returns the directory.
-   */
   public String getFtpDirectory() {
     return ftpDirectory;
   }
 
-  /**
-   * @param directory
-   *          The directory to set.
-   */
   public void setFtpDirectory( String directory ) {
     this.ftpDirectory = directory;
   }
 
-  /**
-   * @return Returns the wildcard.
-   */
   public String getWildcard() {
     return wildcard;
   }
 
-  /**
-   * @param wildcard
-   *          The wildcard to set.
-   */
   public void setWildcard( String wildcard ) {
     this.wildcard = wildcard;
   }
 
-  /**
-   * @return Returns the targetDirectory.
-   */
   public String getTargetDirectory() {
     return targetDirectory;
   }
 
-  /**
-   * @param targetDirectory
-   *          The targetDirectory to set.
-   */
   public void setTargetDirectory( String targetDirectory ) {
     this.targetDirectory = targetDirectory;
   }
 
-  /**
-   * @param remove
-   *          The remove to set.
-   */
   public void setRemove( boolean remove ) {
     this.remove = remove;
   }
 
-  /**
-   * @return Returns the remove.
-   */
   public boolean getRemove() {
     return remove;
   }
 
-  /**
-   * @return Returns the onlyGettingNewFiles.
-   */
   public boolean isOnlyGettingNewFiles() {
     return onlyGettingNewFiles;
   }
 
-  /**
-   * @param onlyGettingNewFiles
-   *          The onlyGettingNewFiles to set.
-   */
   public void setOnlyGettingNewFiles( boolean onlyGettingNewFilesin ) {
     this.onlyGettingNewFiles = onlyGettingNewFilesin;
   }
 
-  protected InetAddress getInetAddress( String realServername ) throws UnknownHostException {
-    return InetAddress.getByName( realServername );
+  // mostly for junit to have ability to set mock factory
+  FTPClientFactory getFtpFactory() {
+    if ( ftpFactory == null ) {
+      ftpFactory = new FTPClientFactory( log );
+    }
+    return ftpFactory;
   }
+
+  // for junit use only
+  void setFtpFactory( FTPClientFactory ftpFactory ) {
+    this.ftpFactory = ftpFactory;
+  }
+
 
   public Result execute( Result previousResult, int nr ) {
     log.logBasic( BaseMessages.getString( PKG, "JobEntryFTP.Started", connectionProperties.getServerName() ) );
@@ -654,11 +608,9 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     limitFiles = Const.toInt( environmentSubstitute( getLimit() ), 10 );
 
     // Here let's put some controls before stating the job
-    if ( movefiles ) {
-      if ( Const.isEmpty( movetodirectory ) ) {
-        logError( BaseMessages.getString( PKG, "JobEntryFTP.MoveToFolderEmpty" ) );
-        return result;
-      }
+    if ( movefiles && Const.isEmpty( movetodirectory ) ) {
+      logError( BaseMessages.getString( PKG, "JobEntryFTP.MoveToFolderEmpty" ) );
+      return result;
     }
 
     if ( isDetailed() ) {
@@ -669,9 +621,8 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     String realMoveToFolder = null;
     connectionProperties.setVariableSpace( this );
     try {
-      FTPClientFactory ftpFactory = new FTPClientFactory( log, PKG );
       // connect to ftp
-      ftpclient = ftpFactory.getFtpClientInitialized( connectionProperties );
+      ftpclient = getFtpFactory().getFtpClientInitialized( connectionProperties );
       if ( ftpclient == null ) {
         throw new Exception( "Unable to connet" );
       }
@@ -1097,7 +1048,14 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   public FTPConnectionProperites getConnectionProperties() {
     return connectionProperties;
   }
-  
+
+  /**
+   * For junit test usage only.
+   * @param prop
+   */
+  public void setConnectionProperties( FTPConnectionProperites connectionProperties ) {
+    this.connectionProperties = connectionProperties;
+  }
 
   /**
    * Use {@link #isActiveConnection()}
@@ -1116,7 +1074,7 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   @Deprecated
   public void setActiveConnection( boolean passive ) {
     this.connectionProperties.setActiveConnection( passive );
-  }  
+  }
 
   /**
    * Use {@link #getConnectionProperties()}
@@ -1193,7 +1151,6 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   public void setUserName( String userName ) {
     this.connectionProperties.setUserName( userName );
   }
-  
 
   /**
    * Use {@link #getConnectionProperties()}
@@ -1213,8 +1170,6 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   public int getTimeout() {
     return this.connectionProperties.getTimeout();
   }
-  
-  
 
   /**
    * Use {@link #getConnectionProperties()}
@@ -1235,7 +1190,6 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     this.connectionProperties.setBinaryMode( binaryMode );
   }
 
-  
   /**
    * Use {@link #getConnectionProperties()}
    * Get the control encoding to be used for ftp'ing
@@ -1409,5 +1363,5 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   @Deprecated
   public String getSocksProxyPort() {
     return String.valueOf( connectionProperties.getSocksProxyPort() );
-  }  
+  }
 }

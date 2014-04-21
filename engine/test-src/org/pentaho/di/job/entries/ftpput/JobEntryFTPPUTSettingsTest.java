@@ -1,4 +1,4 @@
-package org.pentaho.di.job.entries.ftp;
+package org.pentaho.di.job.entries.ftpput;
 
 import java.util.Arrays;
 import java.util.List;
@@ -13,28 +13,21 @@ import org.pentaho.di.trans.steps.loadsave.LoadSaveSettingUtil;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidator;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidatorFactory;
 
-public class JobEntryFTPSettings {
+public class JobEntryFTPPUTSettingsTest {
   private LoadSaveTester loadSaveTester;
 
   @Before
-  public void before() {
+  public void setUp() throws Exception {
     List<String> attributes =
-        Arrays.asList( "ftpDirectory", "targetDirectory", "wildcard", "remove", "onlyGettingNewFiles", "moveFiles",
-            "moveToDirectory", "adddate", "addtime", "SpecifyFormat", "date_time_format", "AddDateBeforeExtension",
-            "isaddresult", "createmovefolder", "limit",
-            "success_condition",
-            // obsolete
-            "serverName", "port", "userName", "password", "timeout", "binaryMode", "controlEncoding", "proxyHost",
-            "proxyPort", "proxyUsername", "proxyPassword", "socksProxyHost", "socksProxyPort", "socksProxyUsername",
-            "socksProxyPassword",
-            // replacement for old getter/setters
-            "connectionProperties" );
+        Arrays.asList( "serverName", "serverPort", "userName", "password", "remoteDirectory", "localDirectory",
+            "wildcard", "binaryMode", "timeout", "remove", "onlyPuttingNewFiles", "activeConnection",
+            "control_encoding", "proxy_host", "proxy_port", "proxy_username", "proxy_password", "socksProxyHost",
+            "socksProxyPort", "socksProxyUsername", "socksProxyPassword", "connectionProperties" );
     LoadSaveSettingUtil util = new LoadSaveSettingUtil( attributes );
-    util.addSetGetPair( "adddate", "isDateInFilename", "setDateInFilename" );
-    util.addSetGetPair( "addtime", "isTimeInFilename", "setTimeInFilename" );
-    util.addSetGetPair( "isaddresult", "isAddToResult", "setAddToResult" );
-    util.addSetGetPair( "createmovefolder", "isCreateMoveFolder", "setCreateMoveFolder" );
-    this.loadSaveTester = new LoadSaveTester( JobEntryFTP.class, util );
+    util.addBooleanSetGetPair( "binaryMode" );
+    util.addBooleanSetGetPair( "activeConnection" );
+
+    this.loadSaveTester = new LoadSaveTester( JobEntryFTPPUT.class, util );
     FieldLoadSaveValidatorFactory validatorFactory = loadSaveTester.getFieldLoadSaveValidatorFactory();
     FieldLoadSaveValidator<FTPConnectionProperites> targetValidator = new FTPConnectionPropValidator();
     validatorFactory.registerValidator( validatorFactory.getName( FTPConnectionProperites.class ), targetValidator );
@@ -49,4 +42,5 @@ public class JobEntryFTPSettings {
   public void loadSaveXmlTest() throws KettleException {
     loadSaveTester.testXmlRoundTrip();
   }
+
 }

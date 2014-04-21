@@ -1,7 +1,6 @@
 package org.pentaho.di.core.ftp;
 
 public enum FTPImplementations {
-  // TODO localize
   /**
    * <p>
    * AUTO is default implementation for backward compatibility, when customer transformation does not have detailed

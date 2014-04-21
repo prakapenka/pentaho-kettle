@@ -1043,7 +1043,7 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
 
   private boolean connectToFTP( boolean checkfolder, String remoteFoldername ) {
     try {
-      FTPClientFactory factory = new FTPClientFactory( LogChannel.UI, PKG );
+      FTPClientFactory factory = new FTPClientFactory( LogChannel.UI );
       FTPConnectionProperites prop = new FTPConnectionProperites();      
       prop.setVariableSpace( jobMeta );
 
@@ -1078,17 +1078,15 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
       }
       prop.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
       prop.setControlEncoding( wControlEncoding.getText() );
+      prop.setBinaryMode( wBinaryMode.getSelection() );
       prop.setActiveConnection( wActive.getSelection() );
            
       FTPCommonClient ftpclient = factory.getFtpClientConnected( prop );
       ftpclient.pwd();
 
       if ( checkfolder ) {
-        // move to spool dir ...
-        if ( !Const.isEmpty( remoteFoldername ) ) {
-          String realFtpDirectory = jobMeta.environmentSubstitute( remoteFoldername );
-          ftpclient.chdir( realFtpDirectory );
-        }
+        String realFtpDirectory = jobMeta.environmentSubstitute( remoteFoldername );
+        ftpclient.chdir( realFtpDirectory );
       }
       return true;
     } catch ( Exception e ) {

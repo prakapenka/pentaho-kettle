@@ -1,8 +1,8 @@
 package org.pentaho.di.job.entries.ftp;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 
@@ -11,12 +11,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.pentaho.di.core.Result;
+import org.pentaho.di.core.ftp.MockFTPClient;
+import org.pentaho.di.core.ftp.MockFTPClientFactory;
+import org.pentaho.di.core.ftp.MockFTPCommonFile;
 import org.pentaho.di.core.logging.KettleLogStore;
 import org.pentaho.di.job.Job;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entry.JobEntryCopy;
+import org.pentaho.di.utils.TestUtils;
 
-// TODO junit tests rewrite
 public class JobEntryFTPTest {
   private Job job;
   private JobEntryFTP entry;
@@ -30,18 +33,27 @@ public class JobEntryFTPTest {
   @Before
   public void setUp() throws Exception {
     job = new Job( null, new JobMeta() );
-    entry = null; //new MockedJobEntryFTP();
+    entry = new JobEntryFTP();
+    MockFTPClientFactory factory = new MockFTPClientFactory();
+    MockFTPClient client = new MockFTPClient();
+
+    MockFTPCommonFile[] files = new MockFTPCommonFile[10];
+    for ( int i = 0; i < files.length - 1; i++ ) {
+      files[i] = new MockFTPCommonFile( "file_" + i );
+
+    }
+    files[files.length - 1] = new MockFTPCommonFile( "robots.txt" );
+    // client will return this files
+    client.dirContent = files;
+
+    factory.setFTPCommonClient( client );
+    entry.setFtpFactory( factory );
 
     job.getJobMeta().addJobEntry( new JobEntryCopy( entry ) );
     entry.setParentJob( job );
-
     job.setStopped( false );
-
-    entry.setServerName( "some.server" );
-    entry.setUserName( "anonymous" );
     entry.setFtpDirectory( "." );
     entry.setWildcard( "robots.txt" );
-    entry.setBinaryMode( false );
     entry.setSuccessCondition( "success_if_no_errors" );
 
     existingDir = TestUtils.createTempDir();

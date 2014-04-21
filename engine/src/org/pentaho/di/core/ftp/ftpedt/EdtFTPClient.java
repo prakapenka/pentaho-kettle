@@ -1,6 +1,5 @@
 package org.pentaho.di.core.ftp.ftpedt;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.Properties;
@@ -17,7 +16,6 @@ import org.pentaho.di.job.entries.ftp.JobEntryFTP;
 
 import com.enterprisedt.net.ftp.FTPClient;
 import com.enterprisedt.net.ftp.FTPConnectMode;
-import com.enterprisedt.net.ftp.FTPException;
 import com.enterprisedt.net.ftp.FTPFile;
 import com.enterprisedt.net.ftp.FTPFileFactory;
 import com.enterprisedt.net.ftp.FTPFileParser;
@@ -146,8 +144,8 @@ public class EdtFTPClient implements FTPCommonClient {
     return ftpClient;
   }
 
-  public static EdtFTPClient getConnectedClient( FTPConnectionProperites info, LogChannelInterface log, Class<?> PKG )
-    throws FTPCommonException, FTPException, IOException {
+  public static EdtFTPClient getConnectedClient( FTPConnectionProperites info, LogChannelInterface log )
+    throws FTPCommonException {
 
     PDIFTPClient pdiCl = new PDIFTPClient( log );
     try {
@@ -155,9 +153,8 @@ public class EdtFTPClient implements FTPCommonClient {
       pdiCl.setRemotePort( info.getPort() );
 
       if ( info.hasProxy() ) {
-        // TODO localize
         throw new FTPCommonException( "HTTP proxy is not supported for FTPEdt implementation. Use "
-            + "apache commons instead." );
+            + "Apache commons instead." );
       }
       //
       if ( info.hasProxy() ) {
@@ -187,11 +184,11 @@ public class EdtFTPClient implements FTPCommonClient {
           FTPClient.initSOCKSAuthentication( sockUser, sockPassw );
         }
       }
-      pdiCl.connect();
-
       if ( log.isRowLevel() ) {
         pdiCl.setMessageListener( new LocalFTPMessageListener( log ) );
       }
+
+      pdiCl.connect();
 
       String userName = info.getUserName();
       pdiCl.login( userName, info.getPassword() );
@@ -204,7 +201,13 @@ public class EdtFTPClient implements FTPCommonClient {
 
     } catch ( Exception e ) {
       // Something goes wrong
-      pdiCl.quit();
+      try {
+        pdiCl.quit();
+      } catch ( Exception ee ) {
+        // we don't care for this one
+      }
+      // do not suppress root exception!
+      throw new FTPCommonException( e );
     }
     EdtFTPClient client = new EdtFTPClient( pdiCl );
     return client;
@@ -212,9 +215,11 @@ public class EdtFTPClient implements FTPCommonClient {
 
   static class LocalFTPMessageListener implements FTPMessageListener {
     private LogChannelInterface log;
+
     LocalFTPMessageListener( LogChannelInterface log ) {
       this.log = log;
     }
+
     @Override
     public void logCommand( String cmd ) {
       log.logRowlevel( cmd );
@@ -232,15 +237,7 @@ public class EdtFTPClient implements FTPCommonClient {
     }
   }
 
-  /**
-   * Hook in known parsers, and then those that have been specified in the variable ftp.file.parser.class.names
-   * 
-   * @param ftpClient
-   * @throws FTPException
-   * @throws IOException
-   */
-  // TODO get rid of.
-  public void init( LogChannelInterface log, Class<?> PKG, VariableSpace vs ) throws FTPCommonException {
+  public void init( LogChannelInterface log, VariableSpace vs ) throws FTPCommonException {
     try {
       if ( log.isDebug() ) {
         log.logDebug( BaseMessages.getString( PKG, "JobEntryFTP.DEBUG.Hooking.Parsers" ) );
@@ -336,7 +333,6 @@ public class EdtFTPClient implements FTPCommonClient {
     return ret;
   }
 
-  // TODO move outside?
   protected static class FTPCommonFileAdapter implements FTPCommonFile {
     private FTPFile file = null;
 

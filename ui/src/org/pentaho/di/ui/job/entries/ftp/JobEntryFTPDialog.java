@@ -283,22 +283,9 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   private Combo wImplementation;
   private FormData fdImplementation;
 
-  // private FTPCommonClient ftpclient = null;
-  private String pwdFolder = null;
-
   // These should not be translated, they are required to exist on all
   // platforms according to the documentation of "Charset".
   private static String[] encodings = { "US-ASCII", "ISO-8859-1", "UTF-8", "UTF-16BE", "UTF-16LE", "UTF-16" };
-
-  //
-  // Original code used to fill encodings, this display all possibilities but
-  // takes 10 seconds on my pc to fill.
-  //
-  // static {
-  // SortedMap charsetMap = Charset.availableCharsets();
-  // Set charsetSet = charsetMap.keySet();
-  // encodings = (String [])charsetSet.toArray(new String[0]);
-  // }
 
   public JobEntryFTPDialog( Shell parent, JobEntryInterface jobEntryInt, Repository rep, JobMeta jobMeta ) {
     super( parent, jobEntryInt, rep, jobMeta );
@@ -318,8 +305,6 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
 
     ModifyListener lsMod = new ModifyListener() {
       public void modifyText( ModifyEvent e ) {
-        pwdFolder = null;
-        // ftpclient = null;
         jobEntry.setChanged();
       }
     };
@@ -389,7 +374,7 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     wlImplementation.setLayoutData( fdlImplementation );
 
     wImplementation = new Combo( wServerSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
-    //TODO tooltip!
+    // TODO tooltip!
     wImplementation.setToolTipText( "select some implementation" );
     // TODO available implementations
     FTPImplementations[] arr = FTPImplementations.values();
@@ -1431,7 +1416,7 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
   }
 
   private FTPCommonClient connectToFTP( boolean checkfolder, boolean checkmoveToFolder ) {
-    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI, PKG );
+    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI );
 
     // extract connection properties (will not be used outside this method)
     FTPConnectionProperites prop = new FTPConnectionProperites();
@@ -1484,46 +1469,31 @@ public class JobEntryFTPDialog extends JobEntryDialog implements JobEntryDialogI
     prop.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
     prop.setControlEncoding( wControlEncoding.getText() );
     prop.setBinaryMode( wBinaryMode.getSelection() );
+    prop.setActiveConnection( wActive.getSelection() );
 
     FTPCommonClient ftpclient = null;
     try {
       // attempt connect
       ftpclient = factory.getFtpClientConnected( prop );
-    } catch ( Exception e ) {
-      return null;
-    }
-    if ( ftpclient == null ) {
-      return null;
-    }
-
-    // now try to check folder for success connection
-    try {
-      ftpclient.pwd();
-
-      // Do we need to check folder also?
-      String realFtpDirectory = "";
-      if ( !Const.isEmpty( wFtpDirectory.getText() ) ) {
-        realFtpDirectory = jobMeta.environmentSubstitute( wFtpDirectory.getText() );
+      if ( ftpclient == null ) {
+        throw new Exception();
       }
+      // now try to check folder for success connection
+      String home = ftpclient.pwd();
+
       if ( checkfolder ) {
-        if ( pwdFolder != null ) {
-          ftpclient.chdir( pwdFolder );
-        }
+        String realFtpDirectory = jobMeta.environmentSubstitute( wFtpDirectory.getText() );
         // move to spool dir ...
         if ( !Const.isEmpty( realFtpDirectory ) ) {
           ftpclient.chdir( realFtpDirectory );
         }
       }
       if ( checkmoveToFolder ) {
-        if ( pwdFolder != null ) {
-          ftpclient.chdir( pwdFolder );
-        }
+          ftpclient.chdir( home );
         // move to folder ...
-        if ( !Const.isEmpty( wMoveToDirectory.getText() ) ) {
-          String realMoveDirectory = jobMeta.environmentSubstitute( wMoveToDirectory.getText() );
-          realMoveDirectory = realFtpDirectory + "/" + realMoveDirectory;
-          ftpclient.chdir( realMoveDirectory );
-        }
+        String realMoveDirectory = jobMeta.environmentSubstitute( wMoveToDirectory.getText() );
+        realMoveDirectory = home + "/" + realMoveDirectory;
+        ftpclient.chdir( realMoveDirectory );
       }
     } catch ( Exception e ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );

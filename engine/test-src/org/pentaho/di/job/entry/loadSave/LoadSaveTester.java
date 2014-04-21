@@ -16,6 +16,7 @@ import org.pentaho.di.core.xml.XMLHandler;
 import org.pentaho.di.job.entry.JobEntryInterface;
 import org.pentaho.di.repository.Repository;
 import org.pentaho.di.trans.steps.loadsave.JavaBeanManipulator;
+import org.pentaho.di.trans.steps.loadsave.LoadSaveSettingUtil;
 import org.pentaho.di.trans.steps.loadsave.MemoryRepository;
 import org.pentaho.di.trans.steps.loadsave.getter.Getter;
 import org.pentaho.di.trans.steps.loadsave.setter.Setter;
@@ -30,6 +31,11 @@ public class LoadSaveTester {
   private final List<String> repoAttributes;
   private final JavaBeanManipulator<? extends JobEntryInterface> manipulator;
   private final FieldLoadSaveValidatorFactory fieldLoadSaveValidatorFactory;
+
+  public LoadSaveTester( Class<? extends JobEntryInterface> clazz, LoadSaveSettingUtil settings ) {
+    this( clazz, settings.getCommonAttributes(), settings.getXmlAttributes(), settings.getRepoAttributes(), settings
+        .getGetterMap(), settings.getSetterMap(), settings.getAttrValidatorMap(), settings.getTypeValidatorMap() );
+  }
 
   public LoadSaveTester( Class<? extends JobEntryInterface> clazz, List<String> commonAttributes,
       List<String> xmlAttributes, List<String> repoAttributes, Map<String, String> getterMap,
@@ -107,6 +113,11 @@ public class LoadSaveTester {
 
   private void validateLoadedMeta( List<String> attributes, Map<String, FieldLoadSaveValidator<?>> validatorMap,
       JobEntryInterface metaSaved, JobEntryInterface metaLoaded ) {
+    // this is dry-run protection from fake success results on empty attributes map
+    if ( attributes.isEmpty() ) {
+      throw new RuntimeException( "Attributes map is empty, no checks will be preformed." );
+    }
+
     for ( String attribute : attributes ) {
       try {
         Getter<?> getterMethod = manipulator.getGetter( attribute );

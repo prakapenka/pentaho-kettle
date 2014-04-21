@@ -1,4 +1,4 @@
-package org.pentaho.di.job.entries.ftp;
+package org.pentaho.di.utils;
 
 import java.io.File;
 
