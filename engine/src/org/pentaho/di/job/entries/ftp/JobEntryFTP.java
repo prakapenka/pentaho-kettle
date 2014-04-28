@@ -36,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.vfs.FileObject;
+import org.apache.commons.vfs.FileSystemException;
 import org.pentaho.di.cluster.SlaveServer;
 import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
@@ -45,6 +46,7 @@ import org.pentaho.di.core.database.DatabaseMeta;
 import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleDatabaseException;
 import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.exception.KettleFileException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.ftp.FTPClientFactory;
 import org.pentaho.di.core.ftp.FTPCommonClient;
@@ -687,7 +689,6 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
         // Some FTP servers return a message saying no files found as a string in the filenlist
         // e.g. Solaris 8
         // CHECK THIS !!!
-
         if ( ftpFiles.length == 1 ) {
           String translatedWildcard = environmentSubstitute( wildcard );
           if ( !Const.isEmpty( translatedWildcard ) ) {
@@ -778,14 +779,26 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
   private void downloadFile( FTPCommonClient ftpclient, String filename, String realMoveToFolder, Job parentJob,
       Result result ) throws Exception {
 
-    String localFilename = filename;
-    targetFilename = KettleVFS.getFilename( KettleVFS.getFileObject( returnTargetFilename( localFilename ) ) );
+    String localFilename = returnTargetFilename( filename );
+    FileObject writeToEx = KettleVFS.getFileObject( localFilename );
+    
+    targetFilename = KettleVFS.getFilename( KettleVFS.getFileObject( localFilename ) );
 
-    if ( ( !onlyGettingNewFiles ) || ( onlyGettingNewFiles && needsDownload( targetFilename ) ) ) {
+    boolean download = false;
+    FileObject writeTo = null;
+    if ( connectionProperties.getImplementation().equals( FTPImplementations.FTPEDT ) ) {
+      download = needsDownload( targetFilename );
+    } else {
+      writeTo = needsDownload( writeToEx );
+      download = writeTo != null;
+    }    
+    
+    if ( !onlyGettingNewFiles || download ) {
       if ( isDetailed() ) {
         logDetailed( BaseMessages.getString( PKG, "JobEntryFTP.GettingFile", filename,
             environmentSubstitute( targetDirectory ) ) );
       }
+      //TODO here bug!
       ftpclient.get( targetFilename, filename );
 
       // Update retrieved files
@@ -916,7 +929,7 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
     String retval = null;
     // Replace possible environment variables...
     if ( filename != null ) {
-      retval = filename;
+      retval = new String( filename );
     } else {
       return null;
     }
@@ -968,12 +981,18 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
    * See if the filename on the FTP server needs downloading. The default is to check the presence of the file in the
    * target directory. If you need other functionality, extend this class and build it into a plugin.
    * 
+   * This method is deprecated and can be used only with old FTPedt implementations.
+   * 
+   * If your have a plugin still uses this class as a parent - consider to stop doing this or just 
+   * copy paste old implementation to your plugin packages with different name.
+   * 
    * @param filename
    *          The local filename to check
    * @param remoteFileSize
    *          The size of the remote file
    * @return true if the file needs downloading
    */
+  @Deprecated
   protected boolean needsDownload( String filename ) {
     boolean retval = false;
 
@@ -1017,7 +1036,46 @@ public class JobEntryFTP extends JobEntryBase implements Cloneable, JobEntryInte
 
     return retval;
   }
+  
+  private FileObject needsDownload( FileObject writeTo ) throws FileSystemException, KettleFileException {
+    if ( !writeTo.exists() ) {
+      if ( isDebug() ) {
+        logDebug( BaseMessages.getString( PKG, "JobEntryFTP.LocalFileNotExists" ), writeTo.getURL() );
+      }
+      return writeTo;
+    }
+    
+    // Local file exists!
+    if ( ifFileExists == ifFileExistsCreateUniq ) {
+      if ( isDebug() ) {
+        logDebug( toString(), BaseMessages.getString( PKG, "JobEntryFTP.LocalFileExists" ), writeTo.getURL() );
+        // Create file with unique name
+      }
+      String url = writeTo.getURL().toExternalForm();      
+      int lenstring = url.length();
+      int lastindexOfDot = url.lastIndexOf( '.' );
+      if ( lastindexOfDot == -1 ) {
+        lastindexOfDot = lenstring;
+      }
+      String newUrl = url.substring( 0, lastindexOfDot ) + StringUtil.getFormattedDateTimeNow( true )
+          + url.substring( lastindexOfDot, lenstring );
+      
+      FileObject newFile = KettleVFS.getFileObject( newUrl, this );
+      
+      return newFile;      
+    } else if ( ifFileExists == ifFileExistsFail ) {
+      log.logError( BaseMessages.getString( PKG, "JobEntryFTP.LocalFileExists" ), writeTo.getURL() );
+      updateErrors();
+    } else {
+      if ( isDebug() ) {
+        logDebug( toString(), BaseMessages.getString( PKG, "JobEntryFTP.LocalFileExists" ), writeTo.getURL() );
+      }
+    }
+    return null;
+  }
 
+
+  //TODO check implement.
   public void check( List<CheckResultInterface> remarks, JobMeta jobMeta, VariableSpace space,
     Repository repository, IMetaStore metaStore ) {
     andValidator().validate( this, "serverName", remarks, putValidators( notBlankValidator() ) );

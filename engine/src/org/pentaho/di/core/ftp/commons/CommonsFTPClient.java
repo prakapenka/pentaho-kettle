@@ -148,10 +148,8 @@ public class CommonsFTPClient implements FTPCommonClient {
   }
 
   @Override
-  public void get( String localFileName, String remoteFileName ) throws FTPCommonException {
-    OutputStream os = null;
+  public void get( OutputStream os, String remoteFileName ) throws FTPCommonException {
     try {
-      os = new FileOutputStream( localFileName );
       ftpClient.retrieveFile( remoteFileName, os );
     } catch ( Exception ex ) {
       // this is the case when target directory not found

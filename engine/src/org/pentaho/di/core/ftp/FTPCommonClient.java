@@ -1,5 +1,7 @@
 package org.pentaho.di.core.ftp;
 
+import java.io.OutputStream;
+
 import org.pentaho.di.core.logging.LogChannelInterface;
 
 
@@ -25,7 +27,7 @@ public interface FTPCommonClient {
 
   void quit( LogChannelInterface log );
 
-  void get( String localFileName, String remoteFileName ) throws FTPCommonException;
+  void get( OutputStream out, String remoteFileName ) throws FTPCommonException;
 
   boolean exists( String fileName ) throws FTPCommonException;
 

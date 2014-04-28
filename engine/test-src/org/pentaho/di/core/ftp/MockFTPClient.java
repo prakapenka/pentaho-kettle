@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.Random;
 
+import org.mockito.Mockito;
 import org.pentaho.di.core.logging.LogChannelInterface;
 
 public class MockFTPClient implements FTPCommonClient {
@@ -14,6 +15,7 @@ public class MockFTPClient implements FTPCommonClient {
   public boolean connected = false;
   LinkedList<String> chdir = new LinkedList<String>();
   public FTPCommonFile[] dirContent = new FTPCommonFile[0];
+  public LinkedList<String> chDir = new LinkedList<String>();
 
   public String[] dir;
 
@@ -42,7 +44,7 @@ public class MockFTPClient implements FTPCommonClient {
 
   @Override
   public void chdir( String dir ) throws FTPCommonException {
-    // test
+    chDir.add( dir );
   }
 
   @Override
@@ -114,5 +116,12 @@ public class MockFTPClient implements FTPCommonClient {
       return newName;
     }
   }
-
+  
+  public static FTPCommonFile[] getFTPCommonFiles ( int count, String namePrefix ) {
+    FTPCommonFile[] arr = new MockFTPCommonFile[count]; 
+    for ( int i = 0 ; i < count ; i++ ) {
+      arr[i] = new MockFTPCommonFile( namePrefix + "_" + i );
+    }
+    return arr;
+  }
 }

@@ -1,5 +1,6 @@
 package org.pentaho.di.core.ftp.ftpedt;
 
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.Properties;
@@ -132,7 +133,7 @@ public class EdtFTPClient implements FTPCommonClient {
   }
 
   @Override
-  public void get( String localFileName, String remoteFileName ) throws FTPCommonException {
+  public void get( OutputStream localFileName, String remoteFileName ) throws FTPCommonException {
     try {
       ftpClient.get( localFileName, remoteFileName );
     } catch ( Exception ex ) {
