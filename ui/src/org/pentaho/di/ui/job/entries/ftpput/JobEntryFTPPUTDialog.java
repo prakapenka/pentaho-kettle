@@ -22,7 +22,8 @@
 
 package org.pentaho.di.ui.job.entries.ftpput;
 
-import java.net.InetAddress;
+import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
@@ -50,6 +51,11 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.ftp.FTPClientFactory;
+import org.pentaho.di.core.ftp.FTPCommonClient;
+import org.pentaho.di.core.ftp.FTPConnectionProperites;
+import org.pentaho.di.core.ftp.FTPImplementations;
+import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entries.ftpput.JobEntryFTPPUT;
@@ -63,8 +69,6 @@ import org.pentaho.di.ui.core.widget.TextVar;
 import org.pentaho.di.ui.job.dialog.JobDialog;
 import org.pentaho.di.ui.job.entry.JobEntryDialog;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
-
-import com.enterprisedt.net.ftp.FTPClient;
 
 /**
  * This dialog allows you to edit the FTP Put job entry settings
@@ -153,6 +157,8 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
   private SelectionAdapter lsDef;
 
   private boolean changed;
+  
+  private Combo wImplementation;
 
   private Label wlBinaryMode;
 
@@ -239,9 +245,6 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
   private Button wbLocalDirectory;
   private FormData fdbLocalDirectory;
 
-  private FTPClient ftpclient = null;
-  private String pwdFolder = null;
-
   public JobEntryFTPPUTDialog( Shell parent, JobEntryInterface jobEntryInt, Repository rep, JobMeta jobMeta ) {
     super( parent, jobEntryInt, rep, jobMeta );
     jobEntry = (JobEntryFTPPUT) jobEntryInt;
@@ -260,8 +263,6 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
 
     ModifyListener lsMod = new ModifyListener() {
       public void modifyText( ModifyEvent e ) {
-        ftpclient = null;
-        pwdFolder = null;
         jobEntry.setChanged();
       }
     };
@@ -325,6 +326,34 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
     ServerSettingsgroupLayout.marginHeight = 10;
 
     wServerSettings.setLayout( ServerSettingsgroupLayout );
+    
+    // switch implementation drop box
+    Label wlImplementation = new Label( wServerSettings, SWT.RIGHT );
+    //TODO set text
+    wlImplementation.setText( "Library:" );
+    props.setLook( wlImplementation );
+    FormData fdlImplementation = new FormData();
+    fdlImplementation.left = new FormAttachment( 0, 0 );
+    fdlImplementation.top = new FormAttachment( wName, margin );
+    fdlImplementation.right = new FormAttachment( middle, 0 );
+    wlImplementation.setLayoutData( fdlImplementation );
+    
+    wImplementation = new Combo( wServerSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
+    //TODO tooltip!
+    wImplementation.setToolTipText( "select some implementation" );
+    // TODO available implementations
+    FTPImplementations[] arr = FTPImplementations.values();
+    String[] options = new String[FTPImplementations.values().length];
+    for ( int i = 0; i < options.length; i++ ) {
+      options[i] = arr[i].getName();
+    }
+    wImplementation.setItems( options );
+    props.setLook( wImplementation );
+    FormData fdImplementation = new FormData();
+    fdImplementation.left = new FormAttachment( middle, margin );
+    fdImplementation.top = new FormAttachment( wName, margin );
+    fdImplementation.right = new FormAttachment( 100, 0 );
+    wImplementation.setLayoutData( fdImplementation );
 
     // ServerName line
     wlServerName = new Label( wServerSettings, SWT.RIGHT );
@@ -332,7 +361,7 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
     props.setLook( wlServerName );
     fdlServerName = new FormData();
     fdlServerName.left = new FormAttachment( 0, 0 );
-    fdlServerName.top = new FormAttachment( wName, margin );
+    fdlServerName.top = new FormAttachment( wImplementation, margin );
     fdlServerName.right = new FormAttachment( middle, 0 );
     wlServerName.setLayoutData( fdlServerName );
     wServerName = new TextVar( jobMeta, wServerSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
@@ -340,7 +369,7 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
     wServerName.addModifyListener( lsMod );
     fdServerName = new FormData();
     fdServerName.left = new FormAttachment( middle, margin );
-    fdServerName.top = new FormAttachment( wName, margin );
+    fdServerName.top = new FormAttachment( wImplementation, margin );
     fdServerName.right = new FormAttachment( 100, 0 );
     wServerName.setLayoutData( fdServerName );
 
@@ -980,18 +1009,6 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
     return jobEntry;
   }
 
-  private void closeFTPConnection() {
-    // Close FTP connection if necessary
-    if ( ftpclient != null && ftpclient.connected() ) {
-      try {
-        ftpclient.quit();
-        ftpclient = null;
-      } catch ( Exception e ) {
-        // Ignore errors
-      }
-    }
-  }
-
   private void test() {
     if ( connectToFTP( false, null ) ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_INFORMATION );
@@ -1025,67 +1042,63 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
   }
 
   private boolean connectToFTP( boolean checkfolder, String remoteFoldername ) {
-    boolean retval = false;
     try {
-      if ( ftpclient == null || !ftpclient.connected() ) {
-        // Create ftp client to host:port ...
-        ftpclient = new FTPClient();
-        String realServername = jobMeta.environmentSubstitute( wServerName.getText() );
-        int realPort = Const.toInt( jobMeta.environmentSubstitute( wServerPort.getText() ), 21 );
-        ftpclient.setRemoteAddr( InetAddress.getByName( realServername ) );
-        ftpclient.setRemotePort( realPort );
+      FTPClientFactory factory = new FTPClientFactory( LogChannel.UI );
+      FTPConnectionProperites prop = new FTPConnectionProperites();      
+      prop.setVariableSpace( jobMeta );
 
-        if ( !Const.isEmpty( wProxyHost.getText() ) ) {
-          String realProxy_host = jobMeta.environmentSubstitute( wProxyHost.getText() );
-          ftpclient.setRemoteAddr( InetAddress.getByName( realProxy_host ) );
+      // set implementation
+      int selectionIndex = wImplementation.getSelectionIndex();
+      String value = ( selectionIndex >= 0 ? wImplementation.getItems()[selectionIndex] : null );
+      prop.setImplementation( value == null ? FTPImplementations.AUTO : FTPImplementations.getByValue( value ) );
 
-          int port = Const.toInt( jobMeta.environmentSubstitute( wProxyPort.getText() ), 21 );
-          if ( port != 0 ) {
-            ftpclient.setRemotePort( port );
-          }
+      prop.setServerName( jobMeta.environmentSubstitute( wServerName.getText() ));
+      String port = jobMeta.environmentSubstitute( wServerPort.getText() );
+      prop.setPort( Const.isEmpty( port ) ? "21" : port );
+      prop.setUserName( jobMeta.environmentSubstitute( wUserName.getText() ) );
+      prop.setPassword( jobMeta.environmentSubstitute( wPassword.getText() ) );
+      // proxy host
+      if ( !Const.isEmpty( wProxyHost.getText() ) ) {
+        prop.setProxyHost( wProxyHost.getText() );
+        String proxyPort = wProxyPort.getText();
+        prop.setProxyPort( Const.isEmpty( proxyPort )  ? "21" : proxyPort );
+        if ( !Const.isEmpty( wProxyUsername.getText() ) ) {
+          prop.setProxyUsername( wProxyUsername.getText() );
+          prop.setProxyPassword( wProxyPassword.getText() );
         }
-
-        // login to ftp host ...
-        ftpclient.connect();
-        String realUsername =
-          jobMeta.environmentSubstitute( wUserName.getText() )
-            + ( !Const.isEmpty( wProxyHost.getText() ) ? "@" + realServername : "" )
-            + ( !Const.isEmpty( wProxyUsername.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyUsername.getText() ) : "" );
-
-        String realPassword =
-          jobMeta.environmentSubstitute( wPassword.getText() )
-            + ( !Const.isEmpty( wProxyPassword.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyPassword.getText() ) : "" );
-        // login now ...
-        ftpclient.login( realUsername, realPassword );
-
-        pwdFolder = ftpclient.pwd();
+      }      
+      // sock proxy
+      if ( !Const.isEmpty( wSocksProxyHost.getText() ) ) {
+        prop.setSocksProxyHost( wSocksProxyHost.getText() );
+        prop.setSocksProxyPort( wSocksProxyPort.getText() );
+        if ( !Const.isEmpty( wSocksProxyUsername.getText() ) ) {
+          prop.setSocksProxyUsername( wSocksProxyUsername.getText() );
+          prop.setSocksProxyPassword( wSocksProxyPassword.getText() );
+        }
       }
+      prop.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+      prop.setControlEncoding( wControlEncoding.getText() );
+      prop.setBinaryMode( wBinaryMode.getSelection() );
+      prop.setActiveConnection( wActive.getSelection() );
+           
+      FTPCommonClient ftpclient = factory.getFtpClientConnected( prop );
+      ftpclient.pwd();
 
       if ( checkfolder ) {
-        if ( pwdFolder != null ) {
-          ftpclient.chdir( pwdFolder );
-        }
-        // move to spool dir ...
-        if ( !Const.isEmpty( remoteFoldername ) ) {
-          String realFtpDirectory = jobMeta.environmentSubstitute( remoteFoldername );
-          ftpclient.chdir( realFtpDirectory );
-        }
+        String realFtpDirectory = jobMeta.environmentSubstitute( remoteFoldername );
+        ftpclient.chdir( realFtpDirectory );
       }
-
-      retval = true;
+      return true;
     } catch ( Exception e ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "JobFTPPUT.ErrorConnect.NOK", e.getMessage() ) + Const.CR );
       mb.setText( BaseMessages.getString( PKG, "JobFTPPUT.ErrorConnect.Title.Bad" ) );
       mb.open();
+      return false;
     }
-    return retval;
   }
 
   public void dispose() {
-    closeFTPConnection();
     WindowProperty winprop = new WindowProperty( shell );
     props.setScreen( winprop );
     shell.dispose();
@@ -1099,28 +1112,38 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
       wName.setText( jobEntry.getName() );
     }
 
-    wServerName.setText( Const.NVL( jobEntry.getServerName(), "" ) );
-    wServerPort.setText( jobEntry.getServerPort() );
-    wUserName.setText( Const.NVL( jobEntry.getUserName(), "" ) );
-    wPassword.setText( Const.NVL( jobEntry.getPassword(), "" ) );
+    // get selected implementation. Since 5.0.x we have ability to switch.
+    List<String> items = Arrays.asList( wImplementation.getItems() );
+    // is selection specified in xml is supported?
+    int selection = items.indexOf( jobEntry.getConnectionProperties().getImplementation().getName() );
+    // if it is undefined, or not supported, we assume auto option is always in the list.
+    // this way if we can't use specified implementation we will relay on auto detection.
+    wImplementation.select( selection > 0 ? selection : items.indexOf( FTPImplementations.AUTO.getName() ) );
+
+    wServerName.setText( Const.NVL( jobEntry.getConnectionProperties().getServerName(), "" ) );
+    wServerPort.setText( String.valueOf( jobEntry.getConnectionProperties().getPort() ) );
+    wUserName.setText( Const.NVL( jobEntry.getConnectionProperties().getUserName(), "" ) );
+    wPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getPassword(), "" ) );
     wRemoteDirectory.setText( Const.NVL( jobEntry.getRemoteDirectory(), "" ) );
     wLocalDirectory.setText( Const.NVL( jobEntry.getLocalDirectory(), "" ) );
     wWildcard.setText( Const.NVL( jobEntry.getWildcard(), "" ) );
     wRemove.setSelection( jobEntry.getRemove() );
-    wBinaryMode.setSelection( jobEntry.isBinaryMode() );
-    wTimeout.setText( "" + jobEntry.getTimeout() );
+    wBinaryMode.setSelection( jobEntry.getConnectionProperties().isBinaryMode() );
+    wTimeout.setText( "" + jobEntry.getConnectionProperties().getTimeout() );
     wOnlyNew.setSelection( jobEntry.isOnlyPuttingNewFiles() );
-    wActive.setSelection( jobEntry.isActiveConnection() );
-    wControlEncoding.setText( jobEntry.getControlEncoding() );
+    wActive.setSelection( jobEntry.getConnectionProperties().isActiveConnection() );
+    wControlEncoding.setText( jobEntry.getConnectionProperties().getControlEncoding() );
 
-    wProxyHost.setText( Const.NVL( jobEntry.getProxyHost(), "" ) );
-    wProxyPort.setText( Const.NVL( jobEntry.getProxyPort(), "" ) );
-    wProxyUsername.setText( Const.NVL( jobEntry.getProxyUsername(), "" ) );
-    wProxyPassword.setText( Const.NVL( jobEntry.getProxyPassword(), "" ) );
-    wSocksProxyHost.setText( Const.NVL( jobEntry.getSocksProxyHost(), "" ) );
-    wSocksProxyPort.setText( Const.NVL( jobEntry.getSocksProxyPort(), "1080" ) );
-    wSocksProxyUsername.setText( Const.NVL( jobEntry.getSocksProxyUsername(), "" ) );
-    wSocksProxyPassword.setText( Const.NVL( jobEntry.getSocksProxyPassword(), "" ) );
+    wProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyHost(), "" ) );
+    wProxyPort.setText( String.valueOf( jobEntry.getConnectionProperties().getProxyPort() ) );
+    wProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyUsername(), "" ) );
+    wProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyPassword(), "" ) );
+    wSocksProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyHost(), "" ) );
+
+    int val = jobEntry.getConnectionProperties().getSocksProxyPort();
+    wSocksProxyPort.setText( val > 0 ? String.valueOf( val ) : "1080" );
+    wSocksProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyUsername(), "" ) );
+    wSocksProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyPassword(), "" ) );
 
     wName.selectAll();
     wName.setFocus();
@@ -1140,29 +1163,33 @@ public class JobEntryFTPPUTDialog extends JobEntryDialog implements JobEntryDial
       mb.open();
       return;
     }
+    String[] items = wImplementation.getItems();
+    String item = items[wImplementation.getSelectionIndex()];
+    jobEntry.getConnectionProperties().setImplementation( FTPImplementations.getByValue( item ) );
+
     jobEntry.setName( wName.getText() );
-    jobEntry.setServerName( wServerName.getText() );
-    jobEntry.setServerPort( wServerPort.getText() );
-    jobEntry.setUserName( wUserName.getText() );
-    jobEntry.setPassword( wPassword.getText() );
+    jobEntry.getConnectionProperties().setServerName( wServerName.getText() );
+    jobEntry.getConnectionProperties().setPort( wServerPort.getText() );
+    jobEntry.getConnectionProperties().setUserName( wUserName.getText() );
+    jobEntry.getConnectionProperties().setPassword( wPassword.getText() );
     jobEntry.setRemoteDirectory( wRemoteDirectory.getText() );
     jobEntry.setLocalDirectory( wLocalDirectory.getText() );
     jobEntry.setWildcard( wWildcard.getText() );
     jobEntry.setRemove( wRemove.getSelection() );
-    jobEntry.setBinaryMode( wBinaryMode.getSelection() );
-    jobEntry.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+    jobEntry.getConnectionProperties().setBinaryMode( wBinaryMode.getSelection() );
+    jobEntry.getConnectionProperties().setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
     jobEntry.setOnlyPuttingNewFiles( wOnlyNew.getSelection() );
-    jobEntry.setActiveConnection( wActive.getSelection() );
-    jobEntry.setControlEncoding( wControlEncoding.getText() );
+    jobEntry.getConnectionProperties().setActiveConnection( wActive.getSelection() );
+    jobEntry.getConnectionProperties().setControlEncoding( wControlEncoding.getText() );
 
-    jobEntry.setProxyHost( wProxyHost.getText() );
-    jobEntry.setProxyPort( wProxyPort.getText() );
-    jobEntry.setProxyUsername( wProxyUsername.getText() );
-    jobEntry.setProxyPassword( wProxyPassword.getText() );
-    jobEntry.setSocksProxyHost( wSocksProxyHost.getText() );
-    jobEntry.setSocksProxyPort( wSocksProxyPort.getText() );
-    jobEntry.setSocksProxyUsername( wSocksProxyUsername.getText() );
-    jobEntry.setSocksProxyPassword( wSocksProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setProxyHost( wProxyHost.getText() );
+    jobEntry.getConnectionProperties().setProxyPort( wProxyPort.getText() );
+    jobEntry.getConnectionProperties().setProxyUsername( wProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setProxyPassword( wProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyHost( wSocksProxyHost.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPort( wSocksProxyPort.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyUsername( wSocksProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPassword( wSocksProxyPassword.getText() );
     dispose();
   }
 
