@@ -35,13 +35,14 @@
  *
  ******************************************************************************/
 
-package org.pentaho.di.job.entries.ftpput;
+package org.pentaho.di.core.ftp.ftpedt;
 
 import java.io.IOException;
 import java.text.ParseException;
 
 import org.pentaho.di.core.logging.LogChannelInterface;
 import org.pentaho.di.i18n.BaseMessages;
+import org.pentaho.di.job.entries.ftpput.JobEntryFTPPUT;
 
 import com.enterprisedt.net.ftp.FTPClient;
 import com.enterprisedt.net.ftp.FTPException;
@@ -50,9 +51,9 @@ import com.enterprisedt.net.ftp.FTPFile;
 /**
  * This class should largely be able to be removed if the edtftp project accepts my change to replace dirDetails(".")
  * with dirDetails(null).
- *
+ * 
  * @author mbatchelor
- *
+ * 
  */
 
 public class PDIFTPClient extends FTPClient {
@@ -67,7 +68,8 @@ public class PDIFTPClient extends FTPClient {
    */
   private boolean sizeSupported = true;
 
-  private static Class<?> PKG = PDIFTPClient.class; // for i18n purposes, needed by Translator2!!
+  // original package messages this class was moved from
+  private static Class<?> PKG = JobEntryFTPPUT.class; // for i18n purposes, needed by Translator2!!
   private LogChannelInterface log;
 
   public PDIFTPClient( LogChannelInterface log ) {
@@ -78,7 +80,7 @@ public class PDIFTPClient extends FTPClient {
 
   /*
    * (non-Javadoc)
-   *
+   * 
    * @see com.enterprisedt.net.ftp.FTPClientInterface#exists(java.lang.String)
    */
   public boolean exists( String remoteFile ) throws IOException, FTPException {
@@ -127,5 +129,4 @@ public class PDIFTPClient extends FTPClient {
       return false;
     }
   }
-
 }

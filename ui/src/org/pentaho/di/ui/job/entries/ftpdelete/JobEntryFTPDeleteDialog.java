@@ -50,6 +50,11 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.Props;
+import org.pentaho.di.core.ftp.FTPClientFactory;
+import org.pentaho.di.core.ftp.FTPCommonClient;
+import org.pentaho.di.core.ftp.FTPConnectionProperites;
+import org.pentaho.di.core.ftp.FTPImplementations;
+import org.pentaho.di.core.logging.LogChannel;
 import org.pentaho.di.i18n.BaseMessages;
 import org.pentaho.di.job.JobMeta;
 import org.pentaho.di.job.entries.ftpdelete.JobEntryFTPDelete;
@@ -67,7 +72,6 @@ import org.pentaho.di.ui.job.dialog.JobDialog;
 import org.pentaho.di.ui.job.entry.JobEntryDialog;
 import org.pentaho.di.ui.trans.step.BaseStepDialog;
 
-import com.enterprisedt.net.ftp.FTPClient;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.HTTPProxyData;
 import com.trilead.ssh2.SFTPv3Client;
@@ -232,7 +236,7 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
   private FormData fdlgetPrevious, fdgetPrevious;
 
   private FTPSConnection ftpsclient = null;
-  private FTPClient ftpclient = null;
+  private FTPCommonClient ftpclient = null;
   private SFTPClient sftpclient = null;
   private Connection conn = null;
   private String pwdFolder = null;
@@ -260,7 +264,7 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     ModifyListener lsMod = new ModifyListener() {
       public void modifyText( ModifyEvent e ) {
         pwdFolder = null;
-        ftpclient = null;
+        //ftpclient = null;
         ftpsclient = null;
         sftpclient = null;
         conn = null;
@@ -332,7 +336,9 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     wlProtocol.setLayoutData( fdlProtocol );
     wProtocol = new Combo( wServerSettings, SWT.SINGLE | SWT.LEFT | SWT.BORDER );
     wProtocol.setToolTipText( BaseMessages.getString( PKG, "JobFTPDelete.Protocol.Tooltip" ) );
-    wProtocol.add( JobEntryFTPDelete.PROTOCOL_FTP );
+    //wProtocol.add( JobEntryFTPDelete.PROTOCOL_FTP );
+    wProtocol.add( JobEntryFTPDelete.PROTOCOL_FTP_EDT );
+    wProtocol.add( JobEntryFTPDelete.PROTOCOL_FTP_COM );
     wProtocol.add( JobEntryFTPDelete.PROTOCOL_FTPS );
     wProtocol.add( JobEntryFTPDelete.PROTOCOL_SFTP );
     wProtocol.add( JobEntryFTPDelete.PROTOCOL_SSH );
@@ -1141,34 +1147,44 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     String errmsg = "";
     try {
       String realfoldername = jobMeta.environmentSubstitute( wFtpDirectory.getText() );
-      if ( !Const.isEmpty( realfoldername ) ) {
-        if ( connect() ) {
-          if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP ) ) {
-            ftpclient.chdir( pwdFolder );
-            ftpclient.chdir( realfoldername );
-            folderexists = true;
-          }
-          if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTPS ) ) {
-            ftpsclient.changeDirectory( pwdFolder );
-            ftpsclient.changeDirectory( realfoldername );
-            folderexists = true;
-          } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SFTP ) ) {
-            sftpclient.chdir( pwdFolder );
-            sftpclient.chdir( realfoldername );
-            folderexists = true;
-          } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SSH ) ) {
-            SFTPv3Client client = new SFTPv3Client( conn );
-            boolean folderexist = sshDirectoryExists( client, realfoldername );
-            client.close();
-            if ( folderexist ) {
-              // Folder exists
+      //TODO what if folder name is empty?
+      String protocol = wProtocol.getText();
+      if ( protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP )
+            || protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP_EDT )
+            || protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP_COM ) ) {
+        FTPCommonClient client = connectToFTP();
+        if ( client == null ) {
+          folderexists = false;
+        } else {        
+          client.pwd();
+          client.chdir( realfoldername );
+          folderexists = true;
+        }
+      } else {      
+        if ( !Const.isEmpty( realfoldername ) ) {
+          if ( connect() ) {
+            if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTPS ) ) {
+              ftpsclient.changeDirectory( pwdFolder );
+              ftpsclient.changeDirectory( realfoldername );
               folderexists = true;
-            } else {
-              // we can not find folder
-              folderexists = false;
+            } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SFTP ) ) {
+              sftpclient.chdir( pwdFolder );
+              sftpclient.chdir( realfoldername );
+              folderexists = true;
+            } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SSH ) ) {
+              SFTPv3Client client = new SFTPv3Client( conn );
+              boolean folderexist = sshDirectoryExists( client, realfoldername );
+              client.close();
+              if ( folderexist ) {
+                // Folder exists
+                folderexists = true;
+              } else {
+                // we can not find folder
+                folderexists = false;
+              }
             }
+  
           }
-
         }
       }
     } catch ( Exception e ) {
@@ -1190,17 +1206,20 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
   }
 
   private boolean connect() {
-    boolean connexion = false;
-    if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP ) ) {
-      connexion = connectToFTP();
+    boolean connection = false;
+    if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP )
+          || wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP_EDT )
+          || wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTP_COM ) ) {
+      FTPCommonClient client = connectToFTP();
+      return client != null;
     } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_FTPS ) ) {
-      connexion = connectToFTPS();
+      connection = connectToFTPS();
     } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SFTP ) ) {
-      connexion = connectToSFTP();
+      connection = connectToSFTP();
     } else if ( wProtocol.getText().equals( JobEntryFTPDelete.PROTOCOL_SSH ) ) {
-      connexion = connectToSSH();
+      connection = connectToSSH();
     }
-    return connexion;
+    return connection;
   }
 
   private void test() {
@@ -1221,51 +1240,60 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
 
   }
 
-  private boolean connectToFTP() {
-    boolean retval = false;
-    try {
-      if ( ftpclient == null || !ftpclient.connected() ) {
-        // Create ftp client to host:port ...
-        ftpclient = new FTPClient();
-        String realServername = jobMeta.environmentSubstitute( wServerName.getText() );
-        int realPort = Const.toInt( jobMeta.environmentSubstitute( wPort.getText() ), 21 );
-        ftpclient.setRemoteAddr( InetAddress.getByName( realServername ) );
-        ftpclient.setRemotePort( realPort );
+  private FTPCommonClient connectToFTP() {
+    FTPCommonClient ftpclient = null;    
 
-        if ( !Const.isEmpty( wProxyHost.getText() ) ) {
-          String realProxy_host = jobMeta.environmentSubstitute( wProxyHost.getText() );
-          ftpclient.setRemoteAddr( InetAddress.getByName( realProxy_host ) );
-
-          int port = Const.toInt( jobMeta.environmentSubstitute( wProxyPort.getText() ), 21 );
-          if ( port != 0 ) {
-            ftpclient.setRemotePort( port );
-          }
-        }
-
-        // login to ftp host ...
-        ftpclient.connect();
-        String realUsername =
-          jobMeta.environmentSubstitute( wUserName.getText() )
-            + ( !Const.isEmpty( wProxyHost.getText() ) ? "@" + realServername : "" )
-            + ( !Const.isEmpty( wProxyUsername.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyUsername.getText() ) : "" );
-
-        String realPassword =
-          jobMeta.environmentSubstitute( wPassword.getText() )
-            + ( !Const.isEmpty( wProxyPassword.getText() ) ? " "
-              + jobMeta.environmentSubstitute( wProxyPassword.getText() ) : "" );
-        // login now ...
-        ftpclient.login( realUsername, realPassword );
-        pwdFolder = ftpclient.pwd();
+    FTPClientFactory factory = new FTPClientFactory( LogChannel.UI );
+    FTPConnectionProperites prop = new FTPConnectionProperites();
+    prop.setVariableSpace( jobMeta );
+    // so we definitely know this is plain FTP here
+    String protocol = wProtocol.getText();
+    if ( protocol.equals( JobEntryFTPDelete.PROTOCOL_FTP_COM ) ) {
+      prop.setImplementation( FTPImplementations.APACHE_CN );      
+    } else {
+      prop.setImplementation( FTPImplementations.FTPEDT );
+    }    
+    prop.setServerName( wServerName.getText() );
+    String port = jobMeta.environmentSubstitute( wPort.getText() );
+    prop.setPort( Const.isEmpty( port ) ? "21" : port );
+    prop.setUserName( wUserName.getText() );
+    prop.setPassword( wPassword.getText() );    
+    //proxy?
+    if ( !Const.isEmpty( wProxyHost.getText() ) && wuseProxy.getSelection() ) {
+      prop.setProxyHost( wProxyHost.getText() );
+      prop.setProxyPort( wProxyPort.getText() );
+      // we have user name and password?
+      if ( !Const.isEmpty( wProxyUsername.getText() ) ){
+        prop.setProxyUsername( wProxyUsername.getText() );
+        prop.setProxyPassword( wProxyPassword.getText() );
       }
-      retval = true;
+    }
+    //sock proxy?
+    if ( !Const.isEmpty( wSocksProxyHost.getText() ) ) {
+      prop.setSocksProxyHost( wSocksProxyHost.getText() );
+      prop.setSocksProxyPort( wSocksProxyPort.getText() );
+      // do we have auth?
+      if ( !Const.isEmpty( wSocksProxyUsername.getText() ) ) {
+        prop.setSocksProxyUsername( wSocksProxyUsername.getText() );
+        prop.setSocksProxyPassword( wSocksProxyPassword.getText() );
+      }      
+    }
+    prop.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+    prop.setActiveConnection( wActive.getSelection() );
+    try {
+      ftpclient = factory.getFtpClientConnected( prop );
+      if ( ftpclient != null ) {
+        ftpclient.pwd();
+      } else {
+        throw new Exception();
+      }      
     } catch ( Exception e ) {
       MessageBox mb = new MessageBox( shell, SWT.OK | SWT.ICON_ERROR );
       mb.setMessage( BaseMessages.getString( PKG, "JobFTPDelete.ErrorConnect.NOK", e.getMessage() ) + Const.CR );
       mb.setText( BaseMessages.getString( PKG, "JobFTPDelete.ErrorConnect.Title.Bad" ) );
       mb.open();
     }
-    return retval;
+    return ftpclient;
   }
 
   private boolean connectToFTPS() {
@@ -1407,25 +1435,33 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
   public void getData() {
     wName.setText( Const.nullToEmpty( jobEntry.getName() ) );
 
-    wProtocol.setText( Const.NVL( jobEntry.getProtocol(), "FTP" ) );
-    wPort.setText( Const.NVL( jobEntry.getPort(), "" ) );
-    wServerName.setText( Const.NVL( jobEntry.getServerName(), "" ) );
-    wUserName.setText( Const.NVL( jobEntry.getUserName(), "" ) );
-    wPassword.setText( Const.NVL( jobEntry.getPassword(), "" ) );
+    //PDI-7415 this is replacement for FTP implementation
+    wProtocol.setText( Const.NVL( jobEntry.getProtocol(), JobEntryFTPDelete.PROTOCOL_FTP_EDT ) );
+
+    Integer intValue = jobEntry.getConnectionProperties().getPort();
+    wPort.setText( intValue == null ? "" : intValue.toString() );
+
+    wServerName.setText( Const.NVL( jobEntry.getConnectionProperties().getServerName(), "" ) );
+    wUserName.setText( Const.NVL( jobEntry.getConnectionProperties().getUserName(), "" ) );
+    wPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getPassword(), "" ) );
     wFtpDirectory.setText( Const.NVL( jobEntry.getFtpDirectory(), "" ) );
     wWildcard.setText( Const.NVL( jobEntry.getWildcard(), "" ) );
-    wTimeout.setText( "" + jobEntry.getTimeout() );
-    wActive.setSelection( jobEntry.isActiveConnection() );
+    wTimeout.setText( "" + jobEntry.getConnectionProperties().getTimeout() );
+    wActive.setSelection( jobEntry.getConnectionProperties().isActiveConnection() );
 
     wuseProxy.setSelection( jobEntry.isUseProxy() );
-    wProxyHost.setText( Const.NVL( jobEntry.getProxyHost(), "" ) );
-    wProxyPort.setText( Const.NVL( jobEntry.getProxyPort(), "" ) );
-    wProxyUsername.setText( Const.NVL( jobEntry.getProxyUsername(), "" ) );
-    wProxyPassword.setText( Const.NVL( jobEntry.getProxyPassword(), "" ) );
-    wSocksProxyHost.setText( Const.NVL( jobEntry.getSocksProxyHost(), "" ) );
-    wSocksProxyPort.setText( Const.NVL( jobEntry.getSocksProxyPort(), "" ) );
-    wSocksProxyUsername.setText( Const.NVL( jobEntry.getSocksProxyUsername(), "" ) );
-    wSocksProxyPassword.setText( Const.NVL( jobEntry.getSocksProxyPassword(), "" ) );
+    wProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyHost(), "" ) );
+
+    intValue = jobEntry.getConnectionProperties().getProxyPort();
+    wProxyPort.setText( intValue == null ? "" : intValue.toString() );
+    wProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyUsername(), "" ) );
+    wProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getProxyPassword(), "" ) );
+    wSocksProxyHost.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyHost(), "" ) );
+
+    intValue = jobEntry.getConnectionProperties().getSocksProxyPort();
+    wSocksProxyPort.setText( intValue == null ? "" : intValue.toString() );
+    wSocksProxyUsername.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyUsername(), "" ) );
+    wSocksProxyPassword.setText( Const.NVL( jobEntry.getConnectionProperties().getSocksProxyPassword(), "" ) );
 
     wNrErrorsLessThan.setText( Const.NVL( jobEntry.getLimitSuccess(), "10" ) );
 
@@ -1468,24 +1504,24 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     }
     jobEntry.setName( wName.getText() );
     jobEntry.setProtocol( wProtocol.getText() );
-    jobEntry.setPort( wPort.getText() );
-    jobEntry.setServerName( wServerName.getText() );
-    jobEntry.setUserName( wUserName.getText() );
-    jobEntry.setPassword( wPassword.getText() );
+    jobEntry.getConnectionProperties().setPort( wPort.getText() );
+    jobEntry.getConnectionProperties().setServerName( wServerName.getText() );
+    jobEntry.getConnectionProperties().setUserName( wUserName.getText() );
+    jobEntry.getConnectionProperties().setPassword( wPassword.getText() );
     jobEntry.setFtpDirectory( wFtpDirectory.getText() );
     jobEntry.setWildcard( wWildcard.getText() );
-    jobEntry.setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
-    jobEntry.setActiveConnection( wActive.getSelection() );
+    jobEntry.getConnectionProperties().setTimeout( Const.toInt( wTimeout.getText(), 10000 ) );
+    jobEntry.getConnectionProperties().setActiveConnection( wActive.getSelection() );
 
     jobEntry.setUseProxy( wuseProxy.getSelection() );
-    jobEntry.setProxyHost( wProxyHost.getText() );
-    jobEntry.setProxyPort( wProxyPort.getText() );
-    jobEntry.setProxyUsername( wProxyUsername.getText() );
-    jobEntry.setProxyPassword( wProxyPassword.getText() );
-    jobEntry.setSocksProxyHost( wSocksProxyHost.getText() );
-    jobEntry.setSocksProxyPort( wSocksProxyPort.getText() );
-    jobEntry.setSocksProxyUsername( wSocksProxyUsername.getText() );
-    jobEntry.setSocksProxyPassword( wSocksProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setProxyHost( wProxyHost.getText() );
+    jobEntry.getConnectionProperties().setProxyPort( wProxyPort.getText() );
+    jobEntry.getConnectionProperties().setProxyUsername( wProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setProxyPassword( wProxyPassword.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyHost( wSocksProxyHost.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPort( wSocksProxyPort.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyUsername( wSocksProxyUsername.getText() );
+    jobEntry.getConnectionProperties().setSocksProxyPassword( wSocksProxyPassword.getText() );
 
     jobEntry.setLimitSuccess( wNrErrorsLessThan.getText() );
 
@@ -1510,7 +1546,7 @@ public class JobEntryFTPDeleteDialog extends JobEntryDialog implements JobEntryD
     // Close FTP connection if necessary
     if ( ftpclient != null && ftpclient.connected() ) {
       try {
-        ftpclient.quit();
+        ftpclient.quit( null );
         ftpclient = null;
       } catch ( Exception e ) {
         // Ignore close errors
